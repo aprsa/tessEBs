@@ -2,6 +2,17 @@
 
 This code utilizes [django](https://www.djangoproject.com/) to create and maintain the TESS eclipsing binary catalog backbone. The database backend is [mariadb](https://mariadb.org/). It is written and maintained by Andrej Prsa and the TESS Eclipsing Binary Working Group. The associated paper is [ApJS 258, 16, 2022](https://ui.adsabs.harvard.edu/abs/2022ApJS..258...16P/abstract).
 
+### Installation
+
+The tessEBs backend is developed in python 3.6+ and django 3.0+. The actual deployment versions are python 3.7.6 and django 3.2.13.
+
+To deploy the database (and the website) locally:
+* initialize a virtual environment
+* install django 3.0+, numpy, mariadb
+* create an empty `tessEBs` database
+* create `tessEBs/private.py` to set up the server and a link to the database
+* run top-level `manage.py` to make all database migrations.
+
 ### Interfacing the catalog using command line interface (CLI)
 
 The admin interface is fully functional and entries can be added directly; for bulk ingestion that is of course impractical. To use CLI, use the top-level `manage.py` under the appropriate environment:
