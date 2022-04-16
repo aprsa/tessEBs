@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>TESS search form</title>
+    <style>
+        input[type=text], input[type=number], input[type=checkbox], select {
+            padding: 5px 20px 5px 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-left: 20px !important;
+            margin-right: 20px !important;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1> Search </h1>
+
+Use the form below to narrow your TESS EB catalog search results.<br><br>
+
+{% load static %}
+
+<form>
+    <label for="order_by">Order by:</label>
+    <select id="order_by" name="order_by">
+        <option value="TIC">TIC ID</option>
+        <option value="BJD0">BJD0</option>
+        <option value="Period" selected>Period</option>
+    </select>
+    <label for="then_order_by">then by:</label>
+    <select id="then_order_by" name="then_order_by">
+        <option value="none"></option>
+        <option value="TIC">TIC ID</option>
+        <option value="BJD0">BJD0</option>
+        <option value="Period">Period</option>
+    </select> <br><br>
+    Include:<br>
+    <input type="checkbox" id="include_tic"  name="include_tic" checked> <span style="width: 500px;">TIC ID</span> <input type="number" id="tic_id_min"  name="tic_id_min" value="0"> <input type="number" id="tic_id_max" name="tic_id_max" value="2000000000"><br>
+    <input type="checkbox" id="include_bjd0" name="include_bjd0" checked> BJD0 <input type="number" id="bjd0_min" name="bjd0_min" value="0"> <input type="number" id="bjd0_max" name="bjd0_max" value="10000"><br>
+    <input type="checkbox" id="include_period" name="include_period" checked> Period <input type="number" id="period_min" name="period_min" value="0" min="0" max="10000" step="0.001"> <input type="number" id="period_max" name="period_max" value="10000"  min="0" max="10000" step="0.001"><br>
+    <input type="checkbox" id="include_morph" name="include_morph" checked> Morphology <input type="number" id="morph_min" name="morph_min" value="0.0"> <input type="number" id="morph_max" name="morph_max" value="1.0"><br>
+    <br>
+    <input type="submit" value="Search">
+</form>
+
+
+</html>

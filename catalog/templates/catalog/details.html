@@ -1,0 +1,119 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %} TIC {{tess_id}} details {% endblock %}
+
+{% block content %}
+
+<div align="center" style="font-size: 150%; font-weight: bold;"> TIC {{ tess_id }} </div>
+
+<br>
+
+{% load static %}
+
+<table>
+    <thead>
+        <th><div class="tooltip">&alpha; [<sup>o</sup>]<span class="tooltiptext">Right ascension</span></div></th>
+        <th><div class="tooltip">&delta; [<sup>o</sup>]<span class="tooltiptext">Declination</span></div></th>
+        <th><div class="tooltip">&lambda; [<sup>o</sup>]<span class="tooltiptext">Galactic longitude</span></div></th>
+        <th><div class="tooltip">&beta; [<sup>o</sup>]<span class="tooltiptext">Galactic latitude</span></div></th>
+        <th><div class="tooltip">Tmag<span class="tooltiptext">TESS magnitude</span></div></th>
+        <th><div class="tooltip">Teff [K]<span class="tooltiptext">Effective temperature</span></div></th>
+        <th><div class="tooltip">log(g) [dex]<span class="tooltiptext">Surface gravity</span></div></th>
+        <th><div class="tooltip">abun [dex]<span class="tooltiptext">Metal abundance</span></div></th>
+        <th><div class="tooltip">PM(&alpha;) [mas]<span class="tooltiptext">Proper motion in R.A.</span></div></th>
+        <th><div class="tooltip">PM(&delta;) [mas]<span class="tooltiptext">Proper motion in Dec.</span></div></th>
+        <th><div class="tooltip">Sectors<span class="tooltiptext">TESS sectors the target was observed in</span></div></th>
+        <th><div class="tooltip">Data<span class="tooltiptext">Light curve data</span></div></th>
+        {% if user.is_authenticated %}
+            <th><div class="tooltip">Links<span class="tooltiptext">Links to the administrative tasks</span></div></th>
+        {% endif %}
+    </thead>
+        <tr>
+            <td> {{ tic.ra|floatformat:6 }} </td>
+            <td> {{ tic.dec|floatformat:6 }} </td>
+            <td> {{ tic.glon|floatformat:6 }} </td>
+            <td> {{ tic.glat|floatformat:6 }} </td>
+            <td> {{ tic.Tmag }} </td>
+            <td> {{ tic.teff }} </td>
+            <td> {{ tic.logg }} </td>
+            <td> {{ tic.abun }} </td>
+            <td> {{ tic.pmra }} </td>
+            <td> {{ tic.pmdec }} </td>
+            <td> {{ list_of_ebs.0.sectors.all|join:", " }} </td>
+            <td> <a href="static/catalog/lcs_ascii/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.norm.lc">LC</a> </td>
+            {% if user.is_authenticated %}
+                <td> <a href="triage/{{tess_id}}">Triage</a>, <a href="admin/catalog/eb/?q={{tess_id|add:"0"}}">Admin</a> </td>
+            {% endif %}
+            </tr>
+</table>
+
+<br>
+
+<table>
+    <thead>
+        <th><div class="tooltip">Signal<span class="tooltiptext">TIC signal ID</span></div></th>
+        <th><div class="tooltip">In catalog?<span class="tooltiptext">Is this signal in the EB catalog?</span></div></th>
+        <th><div class="tooltip">t<sub>0</sub> [days]<span class="tooltiptext">Time of superior conjunction</span></div></th>
+        <th><div class="tooltip">&sigma;<sub>t0</sub> [days]<span class="tooltiptext">Uncertainty of t0</span></div></th>
+        <th><div class="tooltip">P [days]<span class="tooltiptext">Orbital period in days</span></div></th>
+        <th><div class="tooltip">&sigma;<sub>P</sub> [days]<span class="tooltiptext">Orbital period in days</span></div></th>
+        <th><div class="tooltip">Morphology<span class="tooltiptext">EB morphology coefficient</span></div></th>
+        <th><div class="tooltip">Last modified<span class="tooltiptext">Last modification date</span></div></th>
+    </thead>
+    {% for eb in list_of_ebs %}
+        <tr>
+            <td> <a href="{{tess_id}}.{{eb.signal_id}}">{{ eb.signal_id }}</a> </td>
+            <td> {{ eb.in_catalog }} </td>
+            <td> {{ eb.bjd0 }} </td>
+            <td> {{ eb.bjd0_uncert }} </td>
+            <td> {{ eb.period }} </td>
+            <td> {{ eb.period_uncert }} </td>
+            <td> {{ eb.morph_coeff|floatformat:3 }} </td>
+            <td> {{ eb.date_modified }} </td>
+        </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<table>
+    <thead>
+        <th><div class="tooltip">w<sub>p,pf</sub><span class="tooltiptext">Polyfit width of the primary eclipse</span></div></th>
+        <th><div class="tooltip">w<sub>s,pf</sub><span class="tooltiptext">Polyfit width of the secondary eclipse</span></div></th>
+        <th><div class="tooltip">d<sub>p,pf</sub><span class="tooltiptext">Polyfit depth of the primary eclipse</span></div></th>
+        <th><div class="tooltip">d<sub>s,pf</sub><span class="tooltiptext">Polyfit depth of the secondary eclipse</span></div></th>
+        <th><div class="tooltip">&phi;<sub>p,pf</sub><span class="tooltiptext">Polyfit phase of the primary eclipse</span></div></th>
+        <th><div class="tooltip">&phi;<sub>s,pf</sub><span class="tooltiptext">Polyfit phase of the secondary eclipse</span></div></th>
+        <th><div class="tooltip">w<sub>p,2g</sub><span class="tooltiptext">2-gaussian width of the primary eclipse</span></div></th>
+        <th><div class="tooltip">w<sub>s,2g</sub><span class="tooltiptext">2-gaussian width of the secondary eclipse</span></div></th>
+        <th><div class="tooltip">d<sub>p,2g</sub><span class="tooltiptext">2-gaussian depth of the primary eclipse</span></div></th>
+        <th><div class="tooltip">d<sub>s,2g</sub><span class="tooltiptext">2-gaussian depth of the secondary eclipse</span></div></th>
+        <th><div class="tooltip">&phi;<sub>p,2g</sub><span class="tooltiptext">2-gaussian phase of the primary eclipse</span></div></th>
+        <th><div class="tooltip">&phi;<sub>s,2g</sub><span class="tooltiptext">2-gaussian phase of the secondary eclipse</span></div></th>
+    </thead>
+    {% for eb in list_of_ebs %}
+        <tr>
+            <td> {{ eb.prim_width_pf|floatformat:3 }} </td>
+            <td> {{ eb.sec_width_pf|floatformat:3 }} </td>
+            <td> {{ eb.prim_depth_pf|floatformat:3 }} </td>
+            <td> {{ eb.sec_depth_pf|floatformat:3 }} </td>
+            <td> {{ eb.prim_pos_pf|floatformat:3 }} </td>
+            <td> {{ eb.sec_pos_pf|floatformat:3 }} </td>
+            <td> {{ eb.prim_width_2g|floatformat:3 }} </td>
+            <td> {{ eb.sec_width_2g|floatformat:3 }} </td>
+            <td> {{ eb.prim_depth_2g|floatformat:3 }} </td>
+            <td> {{ eb.sec_depth_2g|floatformat:3 }} </td>
+            <td> {{ eb.prim_pos_2g|floatformat:3 }} </td>
+            <td> {{ eb.sec_pos_2g|floatformat:3 }} </td>
+        </tr>
+    {% endfor %}
+</table>
+
+<div align="center">
+    <img src="static/catalog/zlcs_png/tic{{tess_id|stringformat:'010d'}}.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
+    <img src="static/catalog/phs_png/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.ph.png" alt="Phase plot" width="33%">
+    <img src="static/catalog/lcs_png/tic{{tess_id|stringformat:'010d'}}.lc.png" alt="Timeseries plot" width="66%">
+    <img src="static/catalog/spd_png/tic{{tess_id|stringformat:'010d'}}.spd.png" alt="Spectral power density plot" width="33%">
+</div>
+
+{% endblock %}

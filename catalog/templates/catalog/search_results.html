@@ -1,0 +1,48 @@
+{% extends "catalog/base.html" %}
+
+{% load static %}
+
+{% block content %}
+
+{% ifequal format 'csv' %}
+    {{ fields|join:"," }} <br>
+
+    {% for eb in page_of_EBs %}
+        {% if 'incat' in fields %} {{ eb.in_catalog }}, {% endif %}
+        {% if 'tic__tess_id' in fields %} {{ eb.tic.tess_id }}, {% endif %}
+        {% if 'date_added' in fields %}    {{ eb.date_added }},          {% endif %}
+        {% if 'date_modified' in fields %} {{ eb.date_updated }},         {% endif %}
+        {% if 'sectors' in fields %}       {{ eb.sectors }},             {% endif %}
+        {% if 'tic__ra' in fields %}       {{ eb.tic.ra }},                {% endif %}
+        {% if 'tic__dec' in fields %}      {{ eb.tic.dec }},                 {% endif %}
+        {% if 'tic__glon' in fields %}     {{ eb.tic.glon }},      {% endif %}
+        {% if 'tic__glat' in fields %}     {{ eb.tic.glat }},       {% endif %}
+        {% if 'tic__pmra' in fields %}     {{ eb.tic.pmra }}, {% endif %}
+        {% if 'tic__pmdec' in fields %}    {{ eb.tic.pmdec}},  {% endif %}
+        {% if 'bjd0' in fields %}          {{ eb.bjd0 }},            {% endif %}
+        {% if 'bjd0_uncert' in fields %}   {{ eb.bjd0_uncert }},   {% endif %}
+        {% if 'period' in fields %}        {{ eb.period }},           {% endif %}
+        {% if 'period_uncert' in fields %} {{ eb.period_uncert }},  {% endif %}
+        {% if 'morph_coeff' in fields %}   {{ eb.morph_coeff }},          {% endif %}
+        {% if 'tic__teff' in fields %}     {{ eb.tic.teff }},                {% endif %}
+        {% if 'tic__logg' in fields %}     {{ eb.tic.logg }},              {% endif %}
+        {% if 'tic__abun' in fields %}     {{ eb.tic.abun }},               {% endif %}
+        {% if 'source' in fields %}        {{ eb.source }},              {% endif %}
+        {% if 'flags' in fields %}
+            {% if eb.ambiguous %}A{% endif %}{% if eb.insufficient %}I{% endif %}{% if eb.pulscomp %}P{% endif %}{% if eb.heartbeat %}H{% endif %}{% if eb.multi %}M{% endif %},
+        {% endif %}
+        <br>
+    <!-- {{eb.tic.tess_id}},{{eb.signal_id}},{{eb.bjd0}},{{eb.bjd0_uncert}},{{eb.period}},{{eb.period_uncert}},{{eb.morph_coeff}},{{eb.tic.ra}},{{eb.tic.dec}},{{eb.tic.Tmag}},{{eb.tic.glon}},{{eb.tic.glat}},{{eb.tic.teff}},{{eb.tic.logg}},{{eb.tic.abun}}<br> -->
+        <!-- ,"{{eb.sectors.all|join:" "}}" -->
+    {% endfor %}
+{% else %}
+
+<br>
+{{ ebno }} objects satisfy the search criteria.
+<br><br>
+
+{% include "catalog/ebtable.html" with ebs=page_of_EBs fields=fields %}
+
+{% endifequal %}
+
+{% endblock %}

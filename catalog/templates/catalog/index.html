@@ -1,0 +1,25 @@
+{% extends "catalog/base.html" %}
+
+{% load static %}
+
+{% block quicksearch %}
+{% include "catalog/quicksearch.html" %}
+{% endblock %}
+
+{% block content %}
+
+{% include "catalog/ebtable.html" with ebs=page_of_EBs %}
+
+<!-- <ul>
+{% for eb in EBs %}
+    <li>
+        {{eb.tic.tess_id|stringformat:"010d"}}.{{eb.signal_id|stringformat:"02d"}}, {{ eb.ephemerides.count }} sets of ephemerides:
+        {% for eph in eb.ephemerides.all %}
+            {{ eph.bjd0 }} + E x {{ eph.period }},
+        {% endfor %}
+        enjoy!
+    </li>
+{% endfor %}
+</ul> -->
+
+{% endblock %}

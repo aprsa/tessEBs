@@ -1,0 +1,78 @@
+<!DOCTYPE HTML>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title> {% block title %}TESS EB catalog{% endblock %} </title>
+    <style>
+        table {width: 100%; text-align: left; border-collapse: collapse;}
+        th {text-align: left; background-color: #2b71b1; color: white; padding: 8px}
+        th a {color: white; text-decoration: none;}
+        th a:hover {color: white;}
+        th a:visited {color: white;}
+        th a:active {color: white;}
+        td {border: 1px solid #ddd; padding: 8px}
+        .tooltip {position: relative; display: inline-block; border-bottom: 1px dotted black;}
+        .tooltip .tooltiptext {visibility: hidden; width: 100px; background-color: #555; color: white; text-align: center; padding: 5px 0; border-radius: 6px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -20px; opacity: 0; transition: opacity 0.3s;}
+        .tooltip .tooltiptext::after {content: ""; position: absolute; top: 100%; left: 30%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #555 transparent transparent transparent;}
+        .tooltip:hover .tooltiptext {visibility: visible; opacity: 1;}
+        input[type=text], input[type=number], input[type=checkbox], select {
+            padding: 5px 20px 5px 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-left: 20px !important;
+            margin-right: 20px !important;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+        label, select {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        #bggrad {
+            height: 100%;
+            background-color: #2b71b1;
+            background-image: linear-gradient(#2b71b1, #95b8d8)
+        }
+        .alignment {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+        }
+    </style>
+</head>
+
+{% load static %}
+
+<body>
+
+{% block navigation %}
+    <div class="container">
+        <div id="bggrad">
+            <img src="{% static 'catalog/banner.png' %}" style="width:100%;">
+            <div class="alignment">
+                {% if user.is_authenticated %}
+                    <button onclick="location.href='/'">Home</button>
+                    <button onclick="location.href='search'">Search</button>
+                    <button onclick="location.href='triage'">Triage</button>
+                    <button onclick="location.href='accounts/logout'">Logout</button>
+                {% else %}
+                    <button onclick="location.href='/'">Home</button>
+                    <button onclick="location.href='search'">Search</button>
+                    <button onclick="location.href='accounts/login'">Login</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <br>
+{% endblock %}
+
+{% block quicksearch %}
+{% endblock %}
+
+{% block content %}
+{% endblock %}
+
+</body>
+</html>
