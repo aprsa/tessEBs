@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# tessEBs
-TESS Eclipsing Binary website
-=======
 # TESS eclipsing binary catalog (tessEBs)
 
 This code utilizes [django](https://www.djangoproject.com/) to create and maintain the TESS eclipsing binary catalog backbone. The database backend is [mariadb](https://mariadb.org/). It is written and maintained by Andrej Prsa and the TESS Eclipsing Binary Working Group. The associated paper is [ApJS 258, 16, 2022](https://ui.adsabs.harvard.edu/abs/2022ApJS..258...16P/abstract).
@@ -37,4 +33,3 @@ Alternatively, we can pull all associated TIC values from MAST:
 >>> tic = TIC.from_mast(tess_id=1234567890)
 >>> tic.save()
 ```
->>>>>>> 5d1176095aedd2a2d384d52054e0a6712220e882
