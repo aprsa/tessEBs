@@ -13,6 +13,19 @@ To deploy the database (and the website) locally:
 * create `tessEBs/private.py` to set up the server and a link to the database
 * run top-level `manage.py` to make all database migrations.
 
+### Setting up credentials
+
+Typically, all settings that pertain to the database and the website reside in `tessEBs/settings.py`. This is certainly a distinct possibility, but given that this file is shared publicly at github, it would be impractical to keep the actual version on github and using a local version in production. Instead, we keep all credentials in the `tessEBs/private.py` file. The minimal contents are:
+```
+# tessEBs/private.py
+SECRET_KEY = '[production key as it appears originally in settings.py]'
+ENGINE = 'django.db.backends.mysql'  # works for mariadb and mysql
+NAME = 'tessEBs'  # name of the mariadb database; has to be tessEBs if settings.py remains unchanged
+USER = 'user'  # mariadb username with full access to the database
+PASSWORD = 'password'  # mariadb password with full access to the database
+ALLOWED_HOSTS = ['allowed_hostname']  # hostname(s) that have access to the database
+```
+
 ### Interfacing the catalog using command line interface (CLI)
 
 The admin interface is fully functional and entries can be added directly; for bulk ingestion that is of course impractical. To use CLI, use the top-level `manage.py` under the appropriate environment:
