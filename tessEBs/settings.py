@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
-import private
+from .private import *
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,12 +21,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = private.SECRET_KEY
+# SECRET_KEY = private.SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = private.ALLOWED_HOSTS
+# ALLOWED_HOSTS = private.ALLOWED_HOSTS
 
 
 # Application definition
@@ -90,10 +90,10 @@ WSGI_APPLICATION = 'tessEBs.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': private.ENGINE,
-        'NAME': private.NAME,
-        'USER': private.USER,
-        'PASSWORD': private.PASSWORD,
+        'ENGINE': ENGINE,
+        'NAME': NAME,
+        'USER': USER,
+        'PASSWORD': PASSWORD,
     }
 }
 
