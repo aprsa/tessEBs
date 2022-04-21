@@ -21,6 +21,7 @@ The database structure is defined in `catalog/models.py`. The main tables are:
 The tessEBs backend is developed in python 3.6+ and django 3.0+. The actual deployment versions are python 3.7.6 and django 3.2.13.
 
 To deploy the database (and the website) locally:
+
 * initialize a virtual environment
 * install django 3.0+, numpy, mariadb
 * create an empty `tessEBs` database
@@ -30,7 +31,8 @@ To deploy the database (and the website) locally:
 ### Setting up credentials
 
 Typically, all settings that pertain to the database and the website reside in `tessEBs/settings.py`. This is certainly a distinct possibility, but given that this file is shared publicly at github, it would be impractical to keep the actual version on github and using a local version in production. Instead, we keep all credentials in the `tessEBs/private.py` file. The minimal contents are:
-```
+
+```text
 # tessEBs/private.py
 SECRET_KEY = '[production key as it appears originally in settings.py]'
 ENGINE = 'django.db.backends.mysql'  # works for mariadb and mysql
@@ -43,14 +45,17 @@ ALLOWED_HOSTS = ['allowed_hostname']  # hostname(s) that have access to the data
 ## Interfacing the catalog using command line interface (CLI)
 
 The admin interface is fully functional and entries can be added through the admin web form; for bulk ingestion that is of course impractical. To use CLI, use the top-level `manage.py` under the appropriate environment:
-```
+
+```bash
 bash$ source /path/to/venv/bin/activate
 bash (venv)$ ./manage.py shell
 ```
+
 ### Adding TIC entries to the database
 
 To add a new TIC entry, we can instantiate a `TIC`-class object by passing all relevant parameters:
-```
+
+```python
 >>> from catalog.models import TIC
 >>> tic = TIC(
 ...     tess_id=1234567890,
@@ -68,8 +73,23 @@ To add a new TIC entry, we can instantiate a `TIC`-class object by passing all r
 ... )
 >>> tic.save()
 ```
+
 Alternatively, we can use a class method to pull all associated TIC values from MAST:
-```
+
+```python
 >>> tic = TIC.from_mast(tess_id=1234567890)
 >>> tic.save()
+```
+
+If a proposed ephemeris is available, the TIC can also be added to triage by using the `add_to_triage()` class method. It takes three arguments: `tess_id`, `ephemeris` and `source`. The `ephemeris` and `source` parameters can be either dictionaries or database model instances. For example:
+
+```python
+>>> from catalog.models import TIC, EphemerisSource
+>>> tess_id = 7720507
+>>> ephemeris = {
+...     'bjd0': 1984.533246,
+...     'period': 1.577347,
+... }
+>>> source = EphemerisSource.objects.filter(model='QATS', version='1.0')[0]
+>>> tic = TIC.add_to_triage(tess_id=tess_id, ephemeris=ephemeris, source=source)
 ```

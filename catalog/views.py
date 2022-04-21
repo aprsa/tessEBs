@@ -229,7 +229,7 @@ def get_changes(request):
 
 def _get_random_ephem_triage():
     # TODO: filter by triage status instead of all
-    ephems_triage = Ephemeris.objects.filter(triage_status='triage', eb__source='LCF')
+    ephems_triage = Ephemeris.objects.filter(triage_status='triage', tic__datatype='LCF')
     if ephems_triage.count() <= 1:
         return None
 
@@ -243,7 +243,8 @@ def react_triage(request, tess_id=None):
         triage_entry = _get_random_ephem_triage()
         if triage_entry is None:
             return redirect('/triage_done')
-        tess_id = triage_entry.eb.tic.tess_id
+        # tess_id = triage_entry.eb.tic.tess_id
+        tess_id = triage_entry.tic.tess_id
         return redirect('/triage/{}'.format(tess_id))
     if request.user.is_authenticated:
         return render(request, "react/index.html", {'username': request.user.username})
@@ -264,17 +265,22 @@ def _api_phase_up(t, t0=0, P=1):
 def _api_ephem(tess_id, username=None):
     def _ephem_dict(ephem, i):
         source = ephem.source.all()[0]
-        return {'pk': ephem.pk,
-                'i': i,
-                'source': source.model if len(source.model) else source.author,
-                'period': ephem.period,
-                'bjd0': ephem.bjd0,
-                'triage_status': ephem.triage_status,
-                'triage_period': ephem.triage_period,
-                'comments': [{'author': comment.author, 'text': comment.text} for comment in ephem.comments.all()]}
+        return {
+            'pk': ephem.pk,
+            'i': i,
+            'source': source.model if len(source.model) else source.author,
+            'period': ephem.period,
+            'bjd0': ephem.bjd0,
+            'triage_status': ephem.triage_status,
+            'triage_period': ephem.triage_period,
+            'comments': [{'author': comment.author, 'text': comment.text} for comment in ephem.comments.all()]
+        }
 
-    eb = EB.objects.get(tic__tess_id=tess_id, signal_id=1)
-    ephems = eb.ephemerides.all()
+    tic = TIC.objects.get(tess_id=tess_id)
+    ephems = tic.ephemerides.all()
+
+    # eb = EB.objects.get(tic__tess_id=tess_id, signal_id=1)
+    # ephems = eb.ephemerides.all()
 
     all_ephems = Ephemeris.objects.all()
     ephem_triage_total = all_ephems.count()
@@ -284,11 +290,13 @@ def _api_ephem(tess_id, username=None):
     else:
         ephem_triage_user = 0
 
-    return {'tic': tess_id, 
-            'ephems': [_ephem_dict(ephem,i+1) for i,ephem in enumerate(ephems)], 
-            'ephem_triage_total': ephem_triage_total,
-            'ephem_triage_done': ephem_triage_done,
-            'ephem_triage_user': ephem_triage_user}
+    return {
+        'tic': tess_id, 
+        'ephems': [_ephem_dict(ephem, i+1) for i, ephem in enumerate(ephems)],
+        'ephem_triage_total': ephem_triage_total,
+        'ephem_triage_done': ephem_triage_done,
+        'ephem_triage_user': ephem_triage_user
+    }
 
 
 def api_triage_ephem(request, tess_id, username=None):
@@ -300,15 +308,18 @@ def api_triage_user(request, username):
     triaged = []
     tics = []
     for e in ephems:
-        if e.eb.tic.tess_id not in tics:
-            tics.append(e.eb.tic.tess_id)
-            triaged.append({'tic': e.eb.tic.tess_id, 'timestamp': e.triage_timestamp.strftime('%Y-%m-%d %H:%M')})
-
+        # if e.eb.tic.tess_id not in tics:
+        #     tics.append(e.eb.tic.tess_id)
+        #     triaged.append({'tic': e.eb.tic.tess_id, 'timestamp': e.triage_timestamp.strftime('%Y-%m-%d %H:%M')})
+        if e.tic.tess_id not in tics:
+            tics.append(e.tic.tess_id)
+            triaged.append({'tic': e.tic.tess_id, 'timestamp': e.triage_timestamp.strftime('%Y-%m-%d %H:%M')})
 
     comments = []
     for c in Comment.objects.filter(author=username).order_by('-timestamp'):
         if c.ephem is not None:
-            comments.append({'tic': c.ephem.eb.tic.tess_id, 'comment': c.text, 'timestamp': c.timestamp.strftime('%Y-%m-%d %H:%M')})
+            # comments.append({'tic': c.ephem.eb.tic.tess_id, 'comment': c.text, 'timestamp': c.timestamp.strftime('%Y-%m-%d %H:%M')})
+            comments.append({'tic': c.ephem.tic.tess_id, 'comment': c.text, 'timestamp': c.timestamp.strftime('%Y-%m-%d %H:%M')})
 
     return JsonResponse({'triaged': triaged, 'comments': comments})
 
@@ -336,9 +347,10 @@ def api_triage_save(request):
             continue
 
         if ephem_pk == "NEW":
-            es, created = EphemerisSource.objects.get_or_create(author=username, model='')
-            eb = EB.objects.get(tic__tess_id=tess_id, signal_id=1)
-            e = Ephemeris(eb=eb, date_added=datetime.now())
+            es, created = EphemerisSource.objects.get_or_create(author=username, version='(triage)', model='')
+            # eb = EB.objects.get(tic__tess_id=tess_id, signal_id=1)
+            tic = TIC.objects.get(tess_id=tess_id)
+            e = Ephemeris(tic=tic, date_added=datetime.now())
             e.save()
             e.source.set([es])
             ephem_pk = e.pk
@@ -347,7 +359,7 @@ def api_triage_save(request):
             bjd0 = float(ephem_changes.get('bjd0', 0.0))
 
             # need to create phase plots for this new entry
-            times, fluxes = np.loadtxt('./static/catalog/lcs/tic%010d.norm.lc' % (tess_id), usecols=(0, 2), unpack=True)
+            times, fluxes = np.loadtxt('./static/catalog/lc_data/tic%010d.norm.lc' % (tess_id), usecols=(0, 1), unpack=True)
             for period_str, period_mult in zip(['half', 'period', 'double'], [0.5, 1, 2]):
                 phases = _api_phase_up(times, t0=bjd0, P=period*period_mult)
 
@@ -358,17 +370,17 @@ def api_triage_save(request):
                 plt.plot(phases, fluxes, 'b.')
                 plt.plot(phases[phases > 0.9]-1.0, fluxes[phases > 0.9], 'c.')
                 plt.plot(phases[phases < 0.1]+1.0, fluxes[phases < 0.1], 'c.')
-                plt.savefig('./static/catalog/triage_ephem/tic%010d.%d.%s.phase.png' % (tess_id, ephem_pk, period_str))
+                plt.savefig('./static/catalog/triage/tic%010d.%d.%s.phase.png' % (tess_id, ephem_pk, period_str))
 
         else:
             e = Ephemeris.objects.get(pk=int(float(ephem_pk)))
 
-        for k,v in ephem_changes.items():
+        for k, v in ephem_changes.items():
             if k == 'new_comment':
                 c = Comment(ephem=e, author=username, text=v, timestamp=datetime.now())
                 c.save()
             else:
-                setattr(e,k,v)
+                setattr(e, k, v)
 
         e.triage_timestamp = datetime.now()
         e.triage_username = username
@@ -385,7 +397,7 @@ def api_triage_save(request):
 
 def api_data_lc(request, tess_id):
 
-    times, fluxes = np.loadtxt('catalog/static/catalog/lcs/tic%010d.norm.lc' % (tess_id), usecols=(0, 2), unpack=True)
+    times, fluxes = np.loadtxt('catalog/static/catalog/lc_data/tic%010d.norm.lc' % (tess_id), usecols=(0, 1), unpack=True)
 
     return JsonResponse({'times': times.tolist(), 'fluxes': fluxes.tolist(), 'fluxes_min': fluxes.min(), 'fluxes_max': fluxes.max()})
 

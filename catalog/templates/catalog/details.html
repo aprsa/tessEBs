@@ -40,7 +40,7 @@
             <td> {{ tic.pmra }} </td>
             <td> {{ tic.pmdec }} </td>
             <td> {{ list_of_ebs.0.sectors.all|join:", " }} </td>
-            <td> <a href="static/catalog/lcs_ascii/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.norm.lc">LC</a> </td>
+            <td> <a href="static/catalog/lc_data/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.norm.lc">LC</a> </td>
             {% if user.is_authenticated %}
                 <td> <a href="triage/{{tess_id}}">Triage</a>, <a href="admin/catalog/eb/?q={{tess_id|add:"0"}}">Admin</a> </td>
             {% endif %}
@@ -110,10 +110,10 @@
 </table>
 
 <div align="center">
-    <img src="static/catalog/zlcs_png/tic{{tess_id|stringformat:'010d'}}.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
-    <img src="static/catalog/phs_png/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.ph.png" alt="Phase plot" width="33%">
-    <img src="static/catalog/lcs_png/tic{{tess_id|stringformat:'010d'}}.lc.png" alt="Timeseries plot" width="66%">
-    <img src="static/catalog/spd_png/tic{{tess_id|stringformat:'010d'}}.spd.png" alt="Spectral power density plot" width="33%">
+    <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
+    <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.ph.png" alt="Phase plot" width="33%">
+    <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.lc.png" alt="Timeseries plot" width="66%">
+    <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.spd.png" alt="Spectral power density plot" width="33%">
 </div>
 
 {% endblock %}
