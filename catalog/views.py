@@ -116,7 +116,7 @@ class MASTExport(CSVExportView):
 
     def get_field_value(self, obj, field_name):
         # overloading this to strip timezone info.
-        if field_name == 'date_modified':
+        if field_name == 'date_modified' or field_name == 'date_added':
             field = obj._meta.get_field(field_name)
             val = field.value_from_object(obj)
             if val:
@@ -144,7 +144,7 @@ class SearchResultsView(ListView):
             'tic__tess_id',
             'bjd0',
             'period',
-            'morph',
+            'morph_coeff',
             'tic__ra',
             'tic__dec',
             'tic__glon',
@@ -152,7 +152,7 @@ class SearchResultsView(ListView):
             'tic__teff',
             'tic__logg',
             'tic__abun',
-            'tic__tmag',
+            'tic__Tmag',
             'sectors__sector_id',
             'nsectors',
             'signal_id'
@@ -178,6 +178,9 @@ class SearchResultsView(ListView):
             context['page_of_EBs'] = self.object_list
         context['link'] = re.sub('&page=[0-9]+', '', self.search_criteria)
         context['fields'] = self.request.GET.getlist('c')
+        # if quicksearch is used, no fields will be selected; fall back:
+        if len(context['fields']) == 0:
+            context['fields'] = ['tic__tess_id', 'sectors', 'bjd0', 'bjd0_uncert', 'period', 'period_uncert', 'morph_coeff', 'source', 'flags']
 
         return context
 
@@ -191,6 +194,7 @@ class SearchResultsView(ListView):
         tic_query = self.request.GET.get('tic', None)
         if tic_query:
             self.object_list = EB.objects.filter(Q(tic__tess_id__icontains=tic_query))
+            
         else:
             order_by = self.request.GET.get('order_by')
             then_order_by = self.request.GET.get('then_order_by')

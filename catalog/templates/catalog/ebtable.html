@@ -29,6 +29,7 @@
             {% if 'sectors' in fields %}       <th>Sectors</th>             {% endif %}
             {% if 'tic__ra' in fields %}       <th>R.A.</th>                {% endif %}
             {% if 'tic__dec' in fields %}      <th>Dec</th>                 {% endif %}
+            {% if 'tic__Tmag' in fields %}     <th>Tmag</th>                {% endif %}
             {% if 'tic__glon' in fields %}     <th>Gal. longitude</th>      {% endif %}
             {% if 'tic__glat' in fields %}     <th>Gal. latitude</th>       {% endif %}
             {% if 'tic__pmra' in fields %}     <th>PM in R.A. [mas/yr]</th> {% endif %}
@@ -56,6 +57,7 @@
                 {% if 'sectors' in fields %} <td> {{ eb.sectors.all|join:", " }} </td> {% endif %}
                 {% if 'tic__ra' in fields %} <td> {{ eb.tic.ra|stringformat:"6.6f" }} </td> {% endif %}
                 {% if 'tic__dec' in fields %} <td> {{ eb.tic.dec|stringformat:"6.6f" }} </td> {% endif %}
+                {% if 'tic__Tmag' in fields %} <td> {{ eb.tic.Tmag|stringformat:"2.2f" }} </td> {% endif %}
                 {% if 'tic__glon' in fields %} <td> {{ eb.tic.glon|stringformat:"6.6f" }} </td> {% endif %}
                 {% if 'tic__glat' in fields %} <td> {{ eb.tic.glat|stringformat:"6.6f" }} </td> {% endif %}
                 {% if 'tic__pmra' in fields %} <td> {{ eb.tic.pmra }} </td> {% endif %}

@@ -15,6 +15,7 @@
         {% if 'sectors' in fields %}       {{ eb.sectors }},             {% endif %}
         {% if 'tic__ra' in fields %}       {{ eb.tic.ra }},                {% endif %}
         {% if 'tic__dec' in fields %}      {{ eb.tic.dec }},                 {% endif %}
+        {% if 'tic__Tmag' in fields %}      {{ eb.tic.Tmag }},                 {% endif %}
         {% if 'tic__glon' in fields %}     {{ eb.tic.glon }},      {% endif %}
         {% if 'tic__glat' in fields %}     {{ eb.tic.glat }},       {% endif %}
         {% if 'tic__pmra' in fields %}     {{ eb.tic.pmra }}, {% endif %}

@@ -2,9 +2,9 @@
 tessEBs/private.py
 
 # Static files
-static/catalog/lc_data
-static/catalog/lc_figs
-static/catalog/triage
+static/catalog/lc_data/
+static/catalog/lc_figs/
+static/catalog/triage/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

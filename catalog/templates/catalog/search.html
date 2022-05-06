@@ -61,12 +61,12 @@ Use the form below to narrow your TESS EB catalog search results.<br><br>
             <td>log(g) [dex]</td><td><input type="number" id="tic__logg_min" name="tic__logg_min" value="" min="0.0" max="8.0" step="0.01"></td><td><input type="number" id="tic__logg_max" name="tic__logg_max" value="" min="0.0" max="8.0" step="0.01"></td>
         </tr>
         <tr>
-            <td>Morphology</td><td><input type="number" id="morph_min" name="morph_min" value="" min="0.0" max="1.0" step="0.001"></td><td><input type="number" id="morph_max" name="morph_max" value="" min="0.0" max="1.0" step="0.001"></td>
+            <td>Morphology</td><td><input type="number" id="morph_coeff_min" name="morph_coeff_min" value="" min="0.0" max="1.0" step="0.001"></td><td><input type="number" id="morph_coeff_max" name="morph_coeff_max" value="" min="0.0" max="1.0" step="0.001"></td>
             <td>Abundances [dex]</td><td><input type="number" id="tic__abun_min" name="tic__abun_min" value="" min="-4.0" max="1.0" step="0.01"></td><td><input type="number" id="tic__abun_max" name="tic__abun_max" value="" min="-4.0" max="1.0" step="0.01"></td>
         </tr>
         <tr>
             <td>R.A. [deg]</td><td><input type="number" id="tic__ra_min" name="tic__ra_min" value="" min="0.0" max="360.0" step="0.001"></td><td><input type="number" id="tic__ra_max" name="tic__ra_max" value="" min="0.0" max="360.0" step="0.001"></td>
-            <td>Tmag</td><td><input type="number" id="tic__tmag_min" name="tic__tmag_min" value="" min="3.0" max="18.0" step="0.01"></td><td><input type="number" id="tic__tmag_max" name="tic__tmag_max" value="" min="3.0" max="18.0" step="0.01"></td>
+            <td>Tmag</td><td><input type="number" id="tic__Tmag_min" name="tic__Tmag_min" value="" min="3.0" max="18.0" step="0.01"></td><td><input type="number" id="tic__Tmag_max" name="tic__Tmag_max" value="" min="3.0" max="18.0" step="0.01"></td>
         </tr>
         <tr>
             <td>Dec [deg]</td><td><input type="number" id="tic__dec_min" name="tic__dec_min" value="" min="-90.0" max="90.0" step="0.001"></td><td><input type="number" id="tic__dec_max" name="tic__dec_max" value="" min="-90.0" max="90.0" step="0.001"></td>
@@ -101,7 +101,7 @@ Use the form below to narrow your TESS EB catalog search results.<br><br>
         <option value="tic__dec" selected> Dec </option>
         <option value="tic__pmra"> PM in R.A. </option>
         <option value="tic__pmdec"> PM in Dec </option>
-        <option value="tic__tmag" selected> Tmag </option>
+        <option value="tic__Tmag" selected> Tmag </option>
         <option value="bjd0" selected> bjd0 </option>
         <option value="bjd0_uncert"> bjd0 uncert </option>
         <option value="period" selected> Orbital period </option>
