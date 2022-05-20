@@ -42,6 +42,16 @@ PASSWORD = 'password'  # mariadb password with full access to the database
 ALLOWED_HOSTS = ['allowed_hostname']  # hostname(s) that have access to the database
 ```
 
+## Running a server:
+
+The current development setup is using django's own server; to run, do (as regular user):
+```
+screen -S tessEBs
+source /path/to/venv/bin/activate
+cd /path/to/root/dir
+./manage.py runmodwsgi --reload-on-changes
+```
+
 ## Interfacing the catalog using command line interface (CLI)
 
 The admin interface is fully functional and entries can be added through the admin web form; for bulk ingestion that is of course impractical. To use CLI, use the top-level `manage.py` under the appropriate environment:
