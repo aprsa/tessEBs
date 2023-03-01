@@ -103,3 +103,24 @@ If a proposed ephemeris is available, the TIC can also be added to triage by usi
 >>> source = EphemerisSource.objects.filter(model='QATS', version='1.0')[0]
 >>> tic = TIC.add_to_triage(tess_id=tess_id, ephemeris=ephemeris, source=source)
 ```
+
+### Creating static files for a binary star
+
+To properly include data files and plots on the website, static files need to be created. To create static files, we use the `create_static_files()` method. The method takes the following arguments:
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `static_dir` | string | base directory to store the static files in, 'static/catalog' by default |
+| `export_lc` | boolean | should data files be exported to an ascii file |
+| `export_spd` | boolean | should a power spectrum be computed and exported to an ascii file |
+| `plot_lc` | boolean | should all LC-related plots (lc, zlc, ph) be plotted |
+| `plot_spd` | boolean | should a power spectrum plot be plotted |
+| `force_overwrite` | boolean | should existing data/plots be overwritten |
+
+Say an EB has already been imported. Static files will be created by issuing:
+ 
+```python
+>>> from catalog.models import EB
+>>> eb = EB.objects.filter(tic__tess_id=1234567890)[0]
+>>> eb.create_static_files(force_overwrite=True)
+```
