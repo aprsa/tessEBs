@@ -21,6 +21,8 @@ class TIC(models.Model):
     pmra = models.FloatField('proper motion in ra [mas/yr]', null=True, blank=True)
     pmdec = models.FloatField('proper motion in dec [mas/yr]', null=True, blank=True)
     gaia_id = models.BigIntegerField('gaia id', null=True, blank=True)
+    kepler_id = models.BigIntegerField('kepler id', null=True, blank=True)
+    asas_id = models.CharField(max_length=20, null=True, blank=True)
 
     # FIXME: this needs to be many-to-many instead; this was moved from EB to here
     # to plug a problem with triage where a handful of data-less FFI entries are in the
@@ -154,6 +156,9 @@ class TIC(models.Model):
             times, fluxes = np.loadtxt(lcfn, usecols=(0, 1), unpack=True)
         else:
             times, fluxes, _ = read_from_all_fits(self.tess_id, filelist=filelist)
+
+        if times is None or fluxes is None:
+            raise ValueError(f'cannot find any local data associated with TIC {self.tess_id:010d}.')
 
         if ephemerides is None:
             ephemerides = self.ephemerides.all()
@@ -330,10 +335,8 @@ class EB(models.Model):
         filelist=None,
         static_dir='static/catalog',
         export_lc=True,
-        export_ph=True,
         export_spd=True,
         plot_lc=True,
-        plot_ph=True,
         plot_spd=True,
         force_overwrite=False):
 
@@ -343,21 +346,18 @@ class EB(models.Model):
         if times is None:
             raise ValueError(f'no CTL fits data found for TIC {self.tic.tess_id:010d}.')
 
+        bjd0 = self.bjd0 if self.bjd0 is not None else 0.0
+        period = self.period if self.period is not None else times[-1]-times[0]
+
         if export_lc:
             # lightcurve data:
-            lcfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.norm.lc'
+            lcfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.norm.lc'
             if force_overwrite or not os.path.isfile(lcfn):
-                np.savetxt(lcfn, np.vstack((times, fluxes, ferrs)).T)
-
-        if export_ph:
-            # phased lightcurve data:
-            phfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.norm.ph'
-            if force_overwrite or not os.path.isfile(phfn):
-                phases = -0.5 + ((times-self.bjd0-self.period/2) % self.period) / self.period
-                np.savetxt(lcfn, np.vstack((phases, fluxes, ferrs)).T)
+                phases = -0.5 + ((times-bjd0-period/2) % period) / period
+                np.savetxt(lcfn, np.vstack((times, phases, fluxes, ferrs)).T)
 
         if export_spd:
-            spdfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.spd'
+            spdfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.norm.lc.ls'
             if force_overwrite or not os.path.isfile(spdfn):
                 pmin = 60/1440
                 pmax = 0.5*(times[-1]-times[0])
@@ -368,31 +368,32 @@ class EB(models.Model):
                 np.savetxt(spdfn, np.vstack((freqs, lsamps, logfaps)).T)
 
         if plot_lc:
-            plt.figure('lcfig')
+            plt.figure('lcfig', figsize=(16, 5))
             plt.xlabel('Truncated Barycentric Julian Date')
             plt.ylabel('Normalized PDC flux')
             plt.plot(times, fluxes, 'b.')
             plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.lc.png')
             plt.close()
 
-            flt = times < times[0] + 28
-            plt.figure('zlcfig')
+            flt = times < times[0] + min(10*period, 28)
+            plt.figure('zlcfig', figsize=(16, 5))
             plt.xlabel('Truncated Barycentric Julian Date')
             plt.ylabel('Normalized PDC flux')
             plt.plot(times[flt], fluxes[flt], 'b.')
             plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.zlc.png')
             plt.close()
 
-        if plot_ph:
-            plt.figure('phfig')
+            plt.figure('phfig', figsize=(8, 5))
+            plt.title(f'Ephemeris: {bjd0:.4f} + E x {period:.4f}')
             plt.xlabel('Orbital phase')
             plt.ylabel('Normalized PDC flux')
             plt.plot(phases, fluxes, 'b.')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.ph.png')
+            plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.ph.png')
             plt.close()
 
         if plot_spd:
-            plt.figure('spdfig')
+            plt.figure('spfig', figsize=(8, 5))
+            plt.yscale('log')
             plt.xlabel('Frequency [c/d]')
             plt.ylabel('Lomb-Scargle amplitude (log scale)')
             plt.plot(freqs, lsamps, 'b-')

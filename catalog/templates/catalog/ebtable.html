@@ -22,7 +22,7 @@
 <table>
     <thead>
         <tr>
-            {% if 'incat' in fields %}         <th>In catalog</th>          {% endif %}
+            {% if 'in_catalog' in fields %}    <th>In catalog</th>          {% endif %}
             {% if 'tic__tess_id' in fields %}  <th>TESS ID</th>             {% endif %}
             {% if 'date_added' in fields %}    <th>Date added</th>          {% endif %}
             {% if 'date_modified' in fields %} <th>Last update</th>         {% endif %}
@@ -50,7 +50,7 @@
     <tbody>
         {% for eb in ebs %}
             <tr>
-                {% if 'incat' in fields %}   <td> {{eb.in_catalog}} </td> {% endif %}
+                {% if 'in_catalog' in fields %}   <td> {{eb.in_catalog}} </td> {% endif %}
                 {% if 'tic__tess_id' in fields %} <td> <a href="{{eb.tic.tess_id|stringformat:"010d"}}"> {{eb.tic.tess_id|stringformat:"010d"}} </a></td> {% endif %}
                 {% if 'date_added' in fields %} <td> {{ eb.date_added }} </td> {% endif %}
                 {% if 'date_modified' in fields %} <td> {{ eb.date_modified }} </td> {% endif %}

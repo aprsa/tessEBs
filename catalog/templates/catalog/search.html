@@ -93,15 +93,18 @@ Use the form below to narrow your TESS EB catalog search results.<br><br>
     &nbsp; &nbsp; &nbsp;
     <label for="c">Columns to include:</label>
     <select name="c" id="c" multiple>
+        <option value="in_catalog"> In catalog </option>
         <option value="tic__tess_id" selected="true"> TESS ID </option>
         <option value="date_added"> Date added </option>
         <option value="date_modified"> Date modified </option>
-        <option value="source"> Source </option>
+        <option value="sectors"> Sectors </option>
         <option value="tic__ra" selected> R.A. </option>
         <option value="tic__dec" selected> Dec </option>
+        <option value="tic__Tmag" selected> Tmag </option>
+        <option value="tic__glat"> Galactic latitude </option>
+        <option value="tic__glon"> Galactic longitude </option>
         <option value="tic__pmra"> PM in R.A. </option>
         <option value="tic__pmdec"> PM in Dec </option>
-        <option value="tic__Tmag" selected> Tmag </option>
         <option value="bjd0" selected> bjd0 </option>
         <option value="bjd0_uncert"> bjd0 uncert </option>
         <option value="period" selected> Orbital period </option>
@@ -110,9 +113,7 @@ Use the form below to narrow your TESS EB catalog search results.<br><br>
         <option value="tic__teff"> Teff </option>
         <option value="tic__logg"> log(g) </option>
         <option value="tic__abun"> [M/H] </option>
-        <option value="tic__glat"> Galactic latitude </option>
-        <option value="tic__glon"> Galactic longitude </option>
-        <option value="sectors"> Sectors </option>
+        <option value="source"> Source </option>
         <option value="flags"> Flags </option>
     </select>
     &nbsp; &nbsp; &nbsp;
