@@ -180,6 +180,25 @@ class TIC(models.Model):
     def __str__(self):
         return '%10d' % self.tess_id
 
+    def __repr__(self):
+        return (
+            f"<TIC(tess_id={self.tess_id}, "
+            f"ra={self.ra}, "
+            f"dec={self.dec}, "
+            f"glon={self.glon}, "
+            f"glat={self.glat}, "
+            f"Tmag={self.Tmag}, "
+            f"teff={self.teff}, "
+            f"logg={self.logg}, "
+            f"abun={self.abun}, "
+            f"pmra={self.pmra}, "
+            f"pmdec={self.pmdec}, "
+            f"gaia_id={self.gaia_id}, "
+            f"kepler_id={self.kepler_id}, "
+            f"asas_id={self.asas_id}, "
+            f"datatype={self.datatype})>"
+        )
+
 
 class Sector(models.Model):
     sector_id = models.IntegerField('sector id')
@@ -204,12 +223,39 @@ class Sector(models.Model):
     def __str__(self):
         return '%d' % self.sector_id
 
+    def __repr__(self):
+        return (
+            f"<Sector(sector_id={self.sector_id}, "
+            f"date_start={self.date_start}, "
+            f"date_end={self.date_end}, "
+            f"spacecraft_ra={self.spacecraft_ra}, "
+            f"spacecraft_dec={self.spacecraft_dec}, "
+            f"spacecraft_roll={self.spacecraft_roll}, "
+            f"camera1_ra={self.camera1_ra}, "
+            f"camera1_dec={self.camera1_dec}, "
+            f"camera1_roll={self.camera1_roll}, "
+            f"camera2_ra={self.camera2_ra}, "
+            f"camera2_dec={self.camera2_dec}, "
+            f"camera2_roll={self.camera2_roll}, "
+            f"camera3_ra={self.camera3_ra}, "
+            f"camera3_dec={self.camera3_dec}, "
+            f"camera3_roll={self.camera3_roll}, "
+            f"camera4_ra={self.camera4_ra}, "
+            f"camera4_dec={self.camera4_dec}, "
+            f"camera4_roll={self.camera4_roll})>"
+        )
+
 
 class Origin(models.Model):
     name = models.CharField(max_length=32)
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return (
+            f"<Origin(name='{self.name}')>"
+        )
 
 
 class EB(models.Model):
@@ -265,8 +311,7 @@ class EB(models.Model):
         ]
         verbose_name_plural = 'EBs'
 
-#    lc = models.FilePathField('light curve', null=False, default='')
-
+    # lc = models.FilePathField('light curve', null=False, default='')
 
     def save(self, *args, **kwargs):
         # we are overloading the save() method to be able to test for duplicates, handle many-to-many relationships,
@@ -403,6 +448,40 @@ class EB(models.Model):
     def __str__(self):
         return '%010d:%02d' % (self.tic.tess_id, self.signal_id)
 
+    def __repr__(self):
+        return (
+            f"<EB(tic={self.tic}, "
+            f"signal_id={self.signal_id}, "
+            f"in_catalog={self.in_catalog}, "
+            f"date_added={self.date_added}, "
+            f"date_modified={self.date_modified}, "
+            f"source='{self.source}', "
+            f"bjd0={self.bjd0}, "
+            f"bjd0_uncert={self.bjd0_uncert}, "
+            f"period={self.period}, "
+            f"period_uncert={self.period_uncert}, "
+            f"ephem_2g_logprob={self.ephem_2g_logprob}, "
+            f"ephem_pf_logprob={self.ephem_pf_logprob}, "
+            f"morph_coeff={self.morph_coeff}, "
+            f"prim_width_pf={self.prim_width_pf}, "
+            f"sec_width_pf={self.sec_width_pf}, "
+            f"prim_depth_pf={self.prim_depth_pf}, "
+            f"sec_depth_pf={self.sec_depth_pf}, "
+            f"prim_pos_pf={self.prim_pos_pf}, "
+            f"sec_pos_pf={self.sec_pos_pf}, "
+            f"prim_width_2g={self.prim_width_2g}, "
+            f"sec_width_2g={self.sec_width_2g}, "
+            f"prim_depth_2g={self.prim_depth_2g}, "
+            f"sec_depth_2g={self.sec_depth_2g}, "f""
+            f"prim_pos_2g={self.prim_pos_2g}, "
+            f"sec_pos_2g={self.sec_pos_2g}, "
+            f"ambiguous={self.ambiguous}, "
+            f"insufficient={self.insufficient}, "
+            f"heartbeat={self.heartbeat}, "
+            f"pulscomp={self.pulscomp}, "
+            f"multi={self.multi})>"
+        )
+
 
 class EphemerisSource(models.Model):
     model = models.CharField(max_length=16)
@@ -412,6 +491,14 @@ class EphemerisSource(models.Model):
 
     def __str__(self):
         return '%s %s' % (self.model, self.version)
+
+    def __repr__(self):
+        return (
+            f"<EphemerisSource(model='{self.model}', "
+            f"version='{self.version}', "
+            f"author='{self.author}', "
+            f"reference='{self.reference}')>"
+        )
 
 
 class Ephemeris(models.Model):
@@ -437,6 +524,19 @@ class Ephemeris(models.Model):
     def __str__(self):
         return '%s + E x %s' % (self.bjd0, self.period)
 
+    def __repr__(self):
+        return (
+            f"<Ephemeris(date_added={self.date_added}, "
+            f"tic={self.tic}, bjd0={self.bjd0}, "
+            f"bjd0_uncert={self.bjd0_uncert}, "
+            f"period={self.period}, "
+            f"period_uncert={self.period_uncert}, "
+            f"triage_timestamp={self.triage_timestamp}, "
+            f"triage_status='{self.triage_status}', "
+            f"triage_period='{self.triage_period}', "
+            f"triage_username='{self.triage_username}')>"
+        )
+
 
 class Comment(models.Model):
     author = models.CharField('author', null=False, blank=False, max_length=32)
@@ -449,3 +549,13 @@ class Comment(models.Model):
 
     def __str__(self):
         return "%s's comment on %s" % (self.author, self.timestamp)
+
+    def __repr__(self):
+        return (
+            f"<Comment(author='{self.author}', "
+            f"text='{self.text}', "
+            f"timestamp={self.timestamp}, "
+            f"ephem={self.ephem}, "
+            f"eb={self.eb}, "
+            f"tic={self.tic})>"
+        )
