@@ -7,6 +7,52 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+class Sector(models.Model):
+    sector_id = models.IntegerField('sector id')
+    date_start = models.DateField('start date')
+    date_end = models.DateField('end date')
+    spacecraft_ra = models.FloatField('spacecraft R.A.')
+    spacecraft_dec = models.FloatField('spacecraft dec')
+    spacecraft_roll = models.FloatField('spacecraft roll')
+    camera1_ra = models.FloatField('camera 1 R.A.')
+    camera1_dec = models.FloatField('camera 1 dec')
+    camera1_roll = models.FloatField('camera 1 roll')
+    camera2_ra = models.FloatField('camera 2 R.A.')
+    camera2_dec = models.FloatField('camera 2 dec')
+    camera2_roll = models.FloatField('camera 2 roll')
+    camera3_ra = models.FloatField('camera 3 R.A.')
+    camera3_dec = models.FloatField('camera 3 dec')
+    camera3_roll = models.FloatField('camera 3 roll')
+    camera4_ra = models.FloatField('camera 4 R.A.')
+    camera4_dec = models.FloatField('camera 4 dec')
+    camera4_roll = models.FloatField('camera 4 roll')
+
+    def __str__(self):
+        return '%d' % self.sector_id
+
+    def __repr__(self):
+        return (
+            f"<Sector(sector_id={self.sector_id}, "
+            f"date_start={self.date_start}, "
+            f"date_end={self.date_end}, "
+            f"spacecraft_ra={self.spacecraft_ra}, "
+            f"spacecraft_dec={self.spacecraft_dec}, "
+            f"spacecraft_roll={self.spacecraft_roll}, "
+            f"camera1_ra={self.camera1_ra}, "
+            f"camera1_dec={self.camera1_dec}, "
+            f"camera1_roll={self.camera1_roll}, "
+            f"camera2_ra={self.camera2_ra}, "
+            f"camera2_dec={self.camera2_dec}, "
+            f"camera2_roll={self.camera2_roll}, "
+            f"camera3_ra={self.camera3_ra}, "
+            f"camera3_dec={self.camera3_dec}, "
+            f"camera3_roll={self.camera3_roll}, "
+            f"camera4_ra={self.camera4_ra}, "
+            f"camera4_dec={self.camera4_dec}, "
+            f"camera4_roll={self.camera4_roll})>"
+        )
+
+
 class TIC(models.Model):
     # this class defines the fields from the TESS input catalog:
     tess_id = models.BigIntegerField('tess id')
@@ -21,8 +67,14 @@ class TIC(models.Model):
     pmra = models.FloatField('proper motion in ra [mas/yr]', null=True, blank=True)
     pmdec = models.FloatField('proper motion in dec [mas/yr]', null=True, blank=True)
     gaia_id = models.BigIntegerField('gaia id', null=True, blank=True)
+    gaia_dr3_id = models.BigIntegerField('gaia dr3 id', null=True, blank=True)
     kepler_id = models.BigIntegerField('kepler id', null=True, blank=True)
     asas_id = models.CharField(max_length=20, null=True, blank=True)
+
+    # NOTE: sectors is defined both here and in EB; here sectors contains the sectors
+    # that the TIC is in the FOV; in EB, sectors contains the sectors when the TIC was
+    # observed on a postage stamp.
+    sectors = models.ManyToManyField(Sector, blank=True)
 
     # FIXME: this needs to be many-to-many instead; this was moved from EB to here
     # to plug a problem with triage where a handful of data-less FFI entries are in the
@@ -52,7 +104,7 @@ class TIC(models.Model):
         tic.abun = mast_entry['MH'][0] if ~np.isnan(mast_entry['MH'][0]) else None
         tic.pmra = mast_entry['pmRA'][0] if ~np.isnan(mast_entry['pmRA'][0]) else None
         tic.pmdec = mast_entry['pmDEC'][0] if ~np.isnan(mast_entry['pmDEC'][0]) else None
-        tic.gaia_id = int(mast_entry['GAIA'][0]) if ~np.isnan(int(mast_entry['GAIA'][0])) else None
+        tic.gaia_id = int(mast_entry['GAIA'][0]) if mast_entry['GAIA'].tolist()[0] is not None else None
 
         tic.download = kwargs.get('download_data', True)
         tic.destination = kwargs.get('download_path', './')
@@ -82,7 +134,7 @@ class TIC(models.Model):
         ValueError
             _description_
         """
-        
+
         # look up tess_id and add it if not found:
         tics = cls.objects.filter(tess_id=tess_id)
         if len(tics) == 0:
@@ -148,7 +200,8 @@ class TIC(models.Model):
 
     def download_data(self, destination='./'):
         data = obs.query_criteria(dataproduct_type='timeseries', project='TESS', obs_collection='TESS', target_name=self.tess_id)
-        obs.download_products(obs.get_product_list(data), productSubGroupDescription='LC', download_dir=destination)
+        if len(data) > 0:
+            obs.download_products(obs.get_product_list(data), productSubGroupDescription='LC', download_dir=destination)
 
     def prep_for_triage(self, static_dir='static/catalog', filelist=None, ephemerides=None):
         lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
@@ -194,55 +247,61 @@ class TIC(models.Model):
             f"pmra={self.pmra}, "
             f"pmdec={self.pmdec}, "
             f"gaia_id={self.gaia_id}, "
+            f"gaia_dr3_id={self.gaia_dr3_id}, "
             f"kepler_id={self.kepler_id}, "
             f"asas_id={self.asas_id}, "
             f"datatype={self.datatype})>"
         )
 
 
-class Sector(models.Model):
-    sector_id = models.IntegerField('sector id')
-    date_start = models.DateField('start date')
-    date_end = models.DateField('end date')
-    spacecraft_ra = models.FloatField('spacecraft R.A.')
-    spacecraft_dec = models.FloatField('spacecraft dec')
-    spacecraft_roll = models.FloatField('spacecraft roll')
-    camera1_ra = models.FloatField('camera 1 R.A.')
-    camera1_dec = models.FloatField('camera 1 dec')
-    camera1_roll = models.FloatField('camera 1 roll')
-    camera2_ra = models.FloatField('camera 2 R.A.')
-    camera2_dec = models.FloatField('camera 2 dec')
-    camera2_roll = models.FloatField('camera 2 roll')
-    camera3_ra = models.FloatField('camera 3 R.A.')
-    camera3_dec = models.FloatField('camera 3 dec')
-    camera3_roll = models.FloatField('camera 3 roll')
-    camera4_ra = models.FloatField('camera 4 R.A.')
-    camera4_dec = models.FloatField('camera 4 dec')
-    camera4_roll = models.FloatField('camera 4 roll')
+class BLS_run(models.Model):
+    # inputs:
+    tic = models.ForeignKey('catalog.TIC', on_delete=models.PROTECT)
+    duration = models.FloatField('duration', null=False, blank=False)
+    min_eclipses = models.IntegerField('minimum number of eclipses', null=False, blank=False)
+    pmin = models.FloatField('minimum period', null=False, blank=False)
+    pmax = models.FloatField('maximum period', null=False, blank=False)
+
+    # main deliverables:
+    bjd0 = models.FloatField('time of first eclipse', null=False, blank=False)
+    period = models.FloatField('period', null=False, blank=False)
+    max_power = models.FloatField('maximum SPD power', null=False, blank=False)
+    bls_logp = models.FloatField('log-likelihood for the first eclipse', null=False, blank=False)
+
+    # diagnostics:
+    date_run = models.DateTimeField('BLS run date', auto_now_add=True)
+    depth = models.FloatField('eclipse depth', null=False, blank=False)
+    depth_unc = models.FloatField('eclipse depth uncertainty', null=False, blank=False)
+    depth_odd = models.FloatField('double-period odd eclipse depth', null=False, blank=False)
+    depth_odd_unc = models.FloatField('double-period odd eclipse depth uncertainty', null=False, blank=False)
+    depth_even = models.FloatField('double-period even eclipse depth', null=False, blank=False)
+    depth_even_unc = models.FloatField('double-period even eclipse depth uncertainty', null=False, blank=False)
+    depth_half = models.FloatField('half-period eclipse depth', null=False, blank=False)
+    depth_half_unc = models.FloatField('half-period eclipse depth uncertainty', null=False, blank=False)
 
     def __str__(self):
-        return '%d' % self.sector_id
+        return f'TIC {self.tic.tess_id} t0={self.bjd0:6.6f} P0={self.period:6.6f}'
 
     def __repr__(self):
         return (
-            f"<Sector(sector_id={self.sector_id}, "
-            f"date_start={self.date_start}, "
-            f"date_end={self.date_end}, "
-            f"spacecraft_ra={self.spacecraft_ra}, "
-            f"spacecraft_dec={self.spacecraft_dec}, "
-            f"spacecraft_roll={self.spacecraft_roll}, "
-            f"camera1_ra={self.camera1_ra}, "
-            f"camera1_dec={self.camera1_dec}, "
-            f"camera1_roll={self.camera1_roll}, "
-            f"camera2_ra={self.camera2_ra}, "
-            f"camera2_dec={self.camera2_dec}, "
-            f"camera2_roll={self.camera2_roll}, "
-            f"camera3_ra={self.camera3_ra}, "
-            f"camera3_dec={self.camera3_dec}, "
-            f"camera3_roll={self.camera3_roll}, "
-            f"camera4_ra={self.camera4_ra}, "
-            f"camera4_dec={self.camera4_dec}, "
-            f"camera4_roll={self.camera4_roll})>"
+            f"<BLS_run(tic={self.tic}, "
+            f"duration={self.duration}, "
+            f"min_eclipses={self.min_eclipses}, "
+            f"pmin={self.pmin}, "
+            f"pmax={self.pmax}, "
+            f"bjd0={self.bjd0}, "
+            f"period={self.period}, "
+            f"max_power={self.max_power}, "
+            f"bls_logp={self.bls_logp}, "
+            f"date_run={self.date_run}, "
+            f"depth={self.depth}, "
+            f"depth_unc={self.depth_unc}, "
+            f"depth_odd={self.depth_odd}, "
+            f"depth_odd_unc={self.depth_odd_unc}, "
+            f"depth_even={self.depth_even}, "
+            f"depth_even_unc={self.depth_even_unc}, "
+            f"depth_half={self.depth_half}, "
+            f"depth_half_unc={self.depth_half_unc})>"
         )
 
 

@@ -35,7 +35,7 @@ class MainView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['link'] = 'http://tessebs.villanova.edu/?order_by=tic'
+        context['link'] = 'https://tessebs.villanova.edu/?order_by=tic'
         context['ebno'] = self.ebno
         context['page_of_EBs'] = self.paginator.get_page(self.page_num)
         context['fields'] = ['tic__tess_id', 'sectors', 'bjd0', 'bjd0_uncert', 'period', 'period_uncert', 'morph_coeff', 'source', 'flags']
@@ -91,6 +91,7 @@ class MASTExport(CSVExportView):
         'tic__pmra',
         'tic__pmdec',
         'tic__Tmag',
+        'tic__teff',
         'bjd0',
         'bjd0_uncert',
         'period',
@@ -138,7 +139,7 @@ class SearchView(TemplateView):
 class SearchResultsView(ListView):
     model = EB
     template_name = 'catalog/search_results.html'
-    
+
     def filter(self):
         self.fields = [
             'tic__tess_id',
@@ -194,7 +195,7 @@ class SearchResultsView(ListView):
         tic_query = self.request.GET.get('tic', None)
         if tic_query:
             self.object_list = EB.objects.filter(Q(tic__tess_id__icontains=tic_query))
-            
+
         else:
             order_by = self.request.GET.get('order_by')
             then_order_by = self.request.GET.get('then_order_by')
@@ -212,7 +213,7 @@ class SearchResultsView(ListView):
         self.paginator = Paginator(self.object_list, 100)
         page_num = self.request.GET.get('page', 1)
         self.page_of_EBs = self.paginator.get_page(page_num)
-    
+
         return self.object_list
 
 
@@ -295,7 +296,7 @@ def _api_ephem(tess_id, username=None):
         ephem_triage_user = 0
 
     return {
-        'tic': tess_id, 
+        'tic': tess_id,
         'ephems': [_ephem_dict(ephem, i+1) for i, ephem in enumerate(ephems)],
         'ephem_triage_total': ephem_triage_total,
         'ephem_triage_done': ephem_triage_done,
@@ -338,7 +339,7 @@ def api_triage_save(request):
     tess_id = r.get('tic')
     changes = r.get('changes', {})
     # TODO: remove this (or manually add usernames/permissions) once done with testing
-    #if username not in ['kconroy', 'aprsa', 'andrej', 'TEST-USER']:
+    # if username not in ['kconroy', 'aprsa', 'andrej', 'TEST-USER']:
     #    return JsonResponse({'success': False, 'msg': 'not authorized to save changes (please report this if you think you should have permissions)', 'username': username})
     if tess_id is None:
         return JsonResponse({'success': False, 'msg': 'tess_id not provided', 'username': username})
@@ -415,7 +416,7 @@ def api_data_periodogram(request, tess_id):
     peaks_amps = lsamp[peaks_inds]
     peaks_inds_sorted = peaks_inds[peaks_amps.argsort()][::-1]
     peak_periods = 1./freq[peaks_inds_sorted]
-    #peak_periods = np.linspace(0.1, 10, 101).tolist()
+    # peak_periods = np.linspace(0.1, 10, 101).tolist()
 
     # downsample if file is over 80k lines
     if len(freq) > 80000:
@@ -424,4 +425,3 @@ def api_data_periodogram(request, tess_id):
     periods = 1./freq
 
     return JsonResponse({'periods': periods.tolist(), 'powers': lsamp.tolist(), 'peak_periods': peak_periods.tolist()})
-

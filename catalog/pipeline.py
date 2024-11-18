@@ -6,8 +6,11 @@ import subprocess
 import tempfile
 import os
 from astropy.io import fits
+from astropy.timeseries import BoxLeastSquares as BLS
+from astroquery.mast import Observations as O
 
 DATADIR = '/home/users/andrej/projects/tess/data'
+
 
 def scan_directory(datadir, sector_cap=None):
     fits_list = np.array(glob.glob('%s/**/*lc.fits' % (datadir), recursive=True), dtype=str)
@@ -18,12 +21,24 @@ def scan_directory(datadir, sector_cap=None):
         print('No fits files found in the %s directory.' % (datadir))
     return fits_list
 
+
 def fits_exists(tess_id):
     fits_list = glob.glob('%s/**/*%d*lc.fits' % (DATADIR, tess_id), recursive=True)
     if len(fits_list) > 0:
         return True
     else:
         return False
+
+
+def download_fits(tess_id, local_path=None):
+    all_data = O.query_object(f'TIC {tess_id}')
+    tdp = all_data[(all_data['obs_collection'] == 'TESS') & (all_data['dataproduct_type'] == 'timeseries') & (all_data['target_name'] == f'{tess_id}')]
+    for entry in tdp:
+        if 'dvt' in entry['dataURL']:
+            continue
+        print('downloading to ' + os.path.join(local_path, os.path.basename(entry['dataURL'])))
+        O.download_file(entry['dataURL'], local_path=os.path.join(local_path, os.path.basename(entry['dataURL'])))
+
 
 def read_from_all_fits(tess_id, normalize=True, filelist=None):
     if filelist is None:
@@ -64,6 +79,7 @@ def read_from_all_fits(tess_id, normalize=True, filelist=None):
 
     return (times[s], fluxes[s], ferrs[s])
 
+
 def read_from_fits(tess_id, normalize=True):
     filename = glob.glob('%s/*%d*fits' % (DATADIR, tess_id))[0]
 
@@ -84,9 +100,11 @@ def read_from_fits(tess_id, normalize=True):
 
     return (time, flux, flux_err)
 
-def bjd2phase(times, bjd0, period):
-    phases = -0.5+((times-bjd0-period/2) % period) / period
+
+def bjd2phase(times, bjd0, period, pshift=0.0):
+    phases = -0.5+((times-bjd0-(pshift+0.5)*period) % period) / period
     return phases
+
 
 def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, subsample=0.001, npeaks=3, extras=''):
     with tempfile.NamedTemporaryFile() as lcf:
@@ -109,6 +127,15 @@ def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, subsample=0.001, npeaks
         rv['lsstats'] = [float(lsres[1+4*i+3]) for i in range(npeaks)]
 
     return rv
+
+
+def run_bls(time, flux, ferr, pmin=0.1, duration=0.05):
+    bls = BLS(t=time, y=flux, dy=ferr)
+    periodogram = bls.autopower(duration, minimum_n_transit=2, minimum_period=pmin, maximum_period=(time[-1]-time[0])/2)
+    max_power = np.argmax(periodogram.power)
+    stats = bls.compute_stats(periodogram.period[max_power], periodogram.duration[max_power], periodogram.transit_time[max_power])
+    return periodogram, stats
+
 
 def process_lc(tess_id, signal_id, bjd0=None, period=None):
     time, flux, flux_err = read_from_fits(tess_id)
@@ -142,6 +169,7 @@ def process_lc(tess_id, signal_id, bjd0=None, period=None):
     plt.plot(phase, flux, 'b.')
     plt.savefig('lcs/tic%010d.%02d.ph.png' % (tess_id, signal_id))
     plt.clf()
+
 
 def generate_plots(tess_id, prefix, tlc=False, plc=False, spd=False, signal_id=1, bjd0=None, period=None, filelist=None):
     # if ascii verson of the data exists, load it:
