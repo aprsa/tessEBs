@@ -5,9 +5,13 @@ import matplotlib.pyplot as plt
 import subprocess
 import tempfile
 import os
+
 from astropy.io import fits
 from astropy.timeseries import BoxLeastSquares as BLS
 from astroquery.mast import Observations as O
+
+from scipy.signal import lombscargle as LS
+from scipy.stats import exponweib
 
 DATADIR = '/home/users/andrej/projects/tess/data'
 
@@ -30,19 +34,16 @@ def fits_exists(tess_id):
         return False
 
 
-def download_fits(tess_id, local_path=None):
-    all_data = O.query_object(f'TIC {tess_id}')
-    tdp = all_data[(all_data['obs_collection'] == 'TESS') & (all_data['dataproduct_type'] == 'timeseries') & (all_data['target_name'] == f'{tess_id}')]
-    for entry in tdp:
-        if 'dvt' in entry['dataURL']:
-            continue
-        print('downloading to ' + os.path.join(local_path, os.path.basename(entry['dataURL'])))
-        O.download_file(entry['dataURL'], local_path=os.path.join(local_path, os.path.basename(entry['dataURL'])))
+def download_fits(tess_id, destination=None):
+    data = O.query_criteria(dataproduct_type='timeseries', project='TESS', obs_collection='TESS', target_name=tess_id)
+    if len(data) > 0:
+        manifest = O.download_products(O.get_product_list(data), productSubGroupDescription='LC', download_dir=destination)
+    return manifest
 
 
-def read_from_all_fits(tess_id, normalize=True, filelist=None):
+def read_from_all_fits(tess_id, data_dir=DATADIR, normalize=True, filelist=None):
     if filelist is None:
-        fits_list = glob.glob('%s/**/*%d*lc.fits' % (DATADIR, tess_id), recursive=True)
+        fits_list = glob.glob(f'{data_dir}/**/*{tess_id}*lc.fits', recursive=True)
     else:
         fits_list = [x for x in filelist if '%d' % tess_id in x]
 
@@ -106,7 +107,33 @@ def bjd2phase(times, bjd0, period, pshift=0.0):
     return phases
 
 
-def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, subsample=0.001, npeaks=3, extras=''):
+def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
+    freq = np.linspace(1./pmax, 1./pmin, int((1/pmin - 1/pmax)/pstep))
+    power = LS(time, flux, freq, normalize='standard')
+    logfap = np.log10(1.0 - exponweib.cdf(power, a=1.0, c=1.0, loc=0.0, scale=1.0))
+
+    # Find peaks
+    if npeaks > 0:
+        peak_indices = (-power).argsort()[:npeaks]
+        peak_freqs = freq[peak_indices]
+        peak_powers = power[peak_indices]
+        peak_periods = 1.0/peak_freqs
+    else:
+        peak_freqs = []
+        peak_powers = []
+        peak_periods = []
+
+    return {
+        'freq': freq,
+        'power': power,
+        'logfap': logfap,
+        'peak_frequencies': peak_freqs,
+        'peak_powers': peak_powers,
+        'peak_periods': peak_periods
+    }
+
+
+def run_vartools_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, subsample=0.001, npeaks=3, extras=''):
     with tempfile.NamedTemporaryFile() as lcf:
         np.savetxt(lcf, np.vstack((time, flux, ferr)).T)
 

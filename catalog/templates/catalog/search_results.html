@@ -13,6 +13,7 @@
         {% if 'date_added' in fields %}    {{ eb.date_added|date:"o-m-d G:i:s" }},          {% endif %}
         {% if 'date_modified' in fields %} {{ eb.date_updated|date:"o-m-d G:i:s" }},         {% endif %}
         {% if 'sectors' in fields %}       {{ eb.sectors.all|join:";" }},             {% endif %}
+        {% if 'tic__provenances' in fields %} {{ eb.tic.provenances.all|join:";" }},             {% endif %}
         {% if 'tic__ra' in fields %}       {{ eb.tic.ra|stringformat:"6.6f" }},                {% endif %}
         {% if 'tic__dec' in fields %}      {{ eb.tic.dec|stringformat:"6.6f" }},                 {% endif %}
         {% if 'tic__Tmag' in fields %}      {{ eb.tic.Tmag|stringformat:"2.2f" }},                 {% endif %}

@@ -1,6 +1,7 @@
 from django.db import models
-from astroquery.mast import Catalogs as cat, Observations as obs
-from .pipeline import read_from_all_fits, run_lombscargle, bjd2phase
+from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
+from astroquery.simbad import Simbad as sbd
+from .pipeline import download_fits, read_from_all_fits, run_lombscargle, bjd2phase
 
 import os
 import numpy as np
@@ -53,6 +54,18 @@ class Sector(models.Model):
         )
 
 
+class Provenance(models.Model):
+    name = models.CharField(max_length=32)
+
+    def __str__(self):
+        return f'{self.name}'
+
+    def __repr__(self):
+        return (
+            f"<Provenance(name='{self.name}')>"
+        )
+
+
 class TIC(models.Model):
     # this class defines the fields from the TESS input catalog:
     tess_id = models.BigIntegerField('tess id')
@@ -70,17 +83,10 @@ class TIC(models.Model):
     gaia_dr3_id = models.BigIntegerField('gaia dr3 id', null=True, blank=True)
     kepler_id = models.BigIntegerField('kepler id', null=True, blank=True)
     asas_id = models.CharField(max_length=20, null=True, blank=True)
-
-    # NOTE: sectors is defined both here and in EB; here sectors contains the sectors
-    # that the TIC is in the FOV; in EB, sectors contains the sectors when the TIC was
-    # observed on a postage stamp.
     sectors = models.ManyToManyField(Sector, blank=True)
+    provenances = models.ManyToManyField(Provenance, blank=True)
 
-    # FIXME: this needs to be many-to-many instead; this was moved from EB to here
-    # to plug a problem with triage where a handful of data-less FFI entries are in the
-    # catalog.
-
-    # define data source choices:
+    # OBSOLETE:
     class DataType(models.TextChoices):
         FFI = 'FFI', 'Full Frame Image (FFI)'
         TPF = 'TPF', 'Target Pixel File (TPF)'
@@ -92,27 +98,60 @@ class TIC(models.Model):
 
     @classmethod
     def from_mast(cls, tess_id, **kwargs):
-        tic = cls(tess_id=tess_id)
+        # if the TIC is already in the database, use it; otherwise instantiate a new one:
+        if cls.objects.filter(tess_id=tess_id).count() > 0:
+            tic = cls.objects.filter(tess_id=tess_id)[0]
+        else:
+            tic = cls(tess_id=tess_id)
+
         mast_entry = cat.query_criteria(catalog='TIC', ID=tess_id)
-        tic.ra = mast_entry['ra'][0] if ~np.isnan(mast_entry['ra'][0]) else None
-        tic.dec = mast_entry['dec'][0] if ~np.isnan(mast_entry['dec'][0]) else None
-        tic.glon = mast_entry['gallong'][0] if ~np.isnan(mast_entry['gallong'][0]) else None
-        tic.glat = mast_entry['gallat'][0]  if ~np.isnan(mast_entry['gallat'][0]) else None
-        tic.Tmag = mast_entry['Tmag'][0] if ~np.isnan(mast_entry['Tmag'][0]) else None
-        tic.teff = mast_entry['Teff'][0] if ~np.isnan(mast_entry['Teff'][0]) else None
-        tic.logg = mast_entry['logg'][0] if ~np.isnan(mast_entry['logg'][0]) else None
-        tic.abun = mast_entry['MH'][0] if ~np.isnan(mast_entry['MH'][0]) else None
-        tic.pmra = mast_entry['pmRA'][0] if ~np.isnan(mast_entry['pmRA'][0]) else None
-        tic.pmdec = mast_entry['pmDEC'][0] if ~np.isnan(mast_entry['pmDEC'][0]) else None
+
+        def get(entry, key):
+            return entry[key][0] if ~np.isnan(entry[key][0]) else None
+
+        tic.ra = get(mast_entry, 'ra')
+        tic.dec = get(mast_entry, 'dec')
+        tic.glon = get(mast_entry, 'gallong')
+        tic.glat = get(mast_entry, 'gallat')
+        tic.Tmag = get(mast_entry, 'Tmag')
+        tic.teff = get(mast_entry, 'Teff')
+        tic.logg = get(mast_entry, 'logg')
+        tic.abun = get(mast_entry, 'MH')
+        tic.pmra = get(mast_entry, 'pmRA')
+        tic.pmdec = get(mast_entry, 'pmDEC')
+
         tic.gaia_id = int(mast_entry['GAIA'][0]) if mast_entry['GAIA'].tolist()[0] is not None else None
 
+        # query simbad for other designations:
+        other_ids = sbd.query_objectids(f'TIC {tess_id}')
+        for other_id in other_ids['ID']:
+            if 'ASAS' in other_id:
+                tic.asas_id = other_id.split(' ')[1]
+            if 'KIC' in other_id:
+                tic.kepler_id = other_id.split(' ')[1]
+            if 'DR3' in other_id:
+                tic.gaia_dr3_id = other_id.split(' ')[2]
+
+        # note that we cannot add many-to-many fields here as the TIC is not yet saved.
+        tic.sector_list = [Sector.objects.filter(sector_id=sector)[0] for sector in tc.get_sectors(objectname=f'TIC {tess_id}')['sector']]
+
+        # query MAST for data sources, adding them to the known provenances if necessary:
+        tic.provenance_list = []
+        observations = obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')
+        for pname in set(observations['provenance_name']):
+            prov, _ = Provenance.objects.get_or_create(name=pname)
+            tic.provenance_list.append(prov)
+
+        # download data if requested:
         tic.download = kwargs.get('download_data', True)
         tic.destination = kwargs.get('download_path', './')
-
         if tic.download:
             tic.download_data(destination=tic.destination)
 
         return tic
+
+    def download_data(self, destination=None):
+        download_fits(tess_id=self.tess_id, destination=destination)
 
     @classmethod
     def add_to_triage(cls, tess_id, ephemeris, source):
@@ -198,10 +237,53 @@ class TIC(models.Model):
 
         return tic
 
-    def download_data(self, destination='./'):
-        data = obs.query_criteria(dataproduct_type='timeseries', project='TESS', obs_collection='TESS', target_name=self.tess_id)
-        if len(data) > 0:
-            obs.download_products(obs.get_product_list(data), productSubGroupDescription='LC', download_dir=destination)
+    def create_static_files(self, static_dir='static/catalog', data_dir='./', filelist=None, export_lc=True, export_spd=True, plot_lc=True, plot_spd=True, force_overwrite=False):
+        times, fluxes, ferrs = read_from_all_fits(self.tess_id, data_dir=data_dir, filelist=filelist)
+        if times is None:
+            raise ValueError(f'no fits data found for TIC {self.tess_id:010d}.')
+
+        if export_lc:
+            # lightcurve data:
+            lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
+            if force_overwrite or not os.path.isfile(lcfn):
+                np.savetxt(lcfn, np.vstack((times, fluxes, ferrs)).T)
+
+        if plot_lc:
+            plt.figure('lcfig', figsize=(16, 5))
+            plt.xlabel('Truncated Barycentric Julian Date')
+            plt.ylabel('Normalized PDC flux')
+            plt.plot(times, fluxes, 'b.')
+            plt.savefig(f'{static_dir}/lc_figs/tic{self.tess_id:010d}.lc.png')
+            plt.close()
+
+            flt = times < times[0] + 10  # first 10 days of data
+            plt.figure('zlcfig', figsize=(16, 5))
+            plt.xlabel('Truncated Barycentric Julian Date')
+            plt.ylabel('Normalized PDC flux')
+            plt.plot(times[flt], fluxes[flt], 'b.')
+            plt.savefig(f'{static_dir}/lc_figs/tic{self.tess_id:010d}.zlc.png')
+            plt.close()
+
+        if export_spd:
+            # spectral power density data:
+            spdfn = f'{static_dir}/spd_data/tic{self.tess_id:010d}.ls.spd'
+            # if force_overwrite or not os.path.isfile(spdfn):
+            pmin = 1/24  # 1 hour
+            pmax = 0.5*(times[-1]-times[0])  # half the duration of the data
+            pstep = 0.001
+
+            rv = run_lombscargle(times, fluxes, ferrs, pmin, pmax, pstep)
+            freqs, lsamps, logfaps = rv['freq'], rv['power'], rv['logfap']
+            np.savetxt(spdfn, np.vstack((freqs, lsamps, logfaps)).T)
+
+        if plot_spd:
+            plt.figure('spfig', figsize=(8, 5))
+            plt.yscale('log')
+            plt.xlabel('Frequency [c/d]')
+            plt.ylabel('Lomb-Scargle amplitude (log scale)')
+            plt.plot(freqs, lsamps, 'b-')
+            plt.savefig(f'{static_dir}/spd_figs/tic{self.tess_id:010d}.spd.png')
+            plt.close()
 
     def prep_for_triage(self, static_dir='static/catalog', filelist=None, ephemerides=None):
         lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
@@ -230,6 +312,21 @@ class TIC(models.Model):
                 plt.savefig(f'{static_dir}/triage/tic{self.tess_id:010d}.{eph.pk}.{period_str}.phase.png')
                 plt.close()
 
+    def save(self, *args, **kwargs):
+        # overload the save() method to handle duplicates and many-to-many relationships.
+
+        # if TIC does not exist in the database, save it:
+        if TIC.objects.filter(tess_id=self.tess_id).count() == 0:
+            super(TIC, self).save()
+
+        # traverse through the sector_list and add them to many-to-many field:
+        if hasattr(self, 'sector_list'):
+            self.sectors.add(*self.sector_list)
+
+        # traverse through the provenance_list and add them to many-to-many field:
+        if hasattr(self, 'provenance_list'):
+            self.provenances.add(*self.provenance_list)
+
     def __str__(self):
         return '%10d' % self.tess_id
 
@@ -250,6 +347,8 @@ class TIC(models.Model):
             f"gaia_dr3_id={self.gaia_dr3_id}, "
             f"kepler_id={self.kepler_id}, "
             f"asas_id={self.asas_id}, "
+            f"sectors={self.sectors.all()}, "
+            f"provenances={self.provenances.all()}, "
             f"datatype={self.datatype})>"
         )
 

@@ -24,6 +24,7 @@
         <th><div class="tooltip">PM(&delta;) [mas]<span class="tooltiptext">Proper motion in Dec.</span></div></th>
         <th><div class="tooltip">Sectors<span class="tooltiptext">TESS sectors the target was observed in</span></div></th>
         <th><div class="tooltip">Data<span class="tooltiptext">Light curve data</span></div></th>
+        <th><div class="tooltip">Provenances<span class="tooltiptext">Available mission and HLSP provenances</span></div></th>
         {% if user.is_authenticated %}
             <th><div class="tooltip">Links<span class="tooltiptext">Links to the administrative tasks</span></div></th>
         {% endif %}
@@ -39,8 +40,10 @@
             <td> {{ tic.abun }} </td>
             <td> {{ tic.pmra }} </td>
             <td> {{ tic.pmdec }} </td>
-            <td> {{ list_of_ebs.0.sectors.all|join:", " }} </td>
+            <td> {{ tic.sectors.all|join:", " }} </td>
             <td> <a href="static/catalog/lc_data/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.norm.lc">LC</a> </td>
+            <!-- <td> {% for prov in tic.provenances.all %} {{ prov.name }} {% endfor %} </td> -->
+            <td> {{ tic.provenances.all|join:", " }} </td>
             {% if user.is_authenticated %}
                 <td> <a href="triage/{{tess_id}}">Triage</a>, <a href="admin/catalog/eb/?q={{tess_id|add:"0"}}">Admin</a> </td>
             {% endif %}
@@ -113,7 +116,7 @@
     <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
     <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.ph.png" alt="Phase plot" width="33%">
     <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.lc.png" alt="Timeseries plot" width="66%">
-    <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.spd.png" alt="Spectral power density plot" width="33%">
+    <img src="static/catalog/spd_figs/tic{{tess_id|stringformat:'010d'}}.spd.png" alt="Spectral power density plot" width="33%">
 </div>
 
 {% endblock %}
