@@ -4,32 +4,32 @@
 
 {% block content %}
 
-{% ifequal format 'csv' %}
+{% if format == 'csv' %}
     {{ fields|join:"," }} <br>
 
     {% for eb in page_of_EBs %}
-        {% if 'in_catalog' in fields %} {{ eb.in_catalog }}, {% endif %}
-        {% if 'tic__tess_id' in fields %} {{ eb.tic.tess_id|stringformat:"010d" }}, {% endif %}
-        {% if 'date_added' in fields %}    {{ eb.date_added|date:"o-m-d G:i:s" }},          {% endif %}
-        {% if 'date_modified' in fields %} {{ eb.date_updated|date:"o-m-d G:i:s" }},         {% endif %}
-        {% if 'sectors' in fields %}       {{ eb.sectors.all|join:";" }},             {% endif %}
-        {% if 'tic__provenances' in fields %} {{ eb.tic.provenances.all|join:";" }},             {% endif %}
-        {% if 'tic__ra' in fields %}       {{ eb.tic.ra|stringformat:"6.6f" }},                {% endif %}
-        {% if 'tic__dec' in fields %}      {{ eb.tic.dec|stringformat:"6.6f" }},                 {% endif %}
-        {% if 'tic__Tmag' in fields %}      {{ eb.tic.Tmag|stringformat:"2.2f" }},                 {% endif %}
-        {% if 'tic__glon' in fields %}     {{ eb.tic.glon|stringformat:"6.6f" }},      {% endif %}
-        {% if 'tic__glat' in fields %}     {{ eb.tic.glat|stringformat:"6.6f" }},       {% endif %}
-        {% if 'tic__pmra' in fields %}     {{ eb.tic.pmra }}, {% endif %}
-        {% if 'tic__pmdec' in fields %}    {{ eb.tic.pmdec}},  {% endif %}
-        {% if 'bjd0' in fields %}          {{ eb.bjd0|floatformat:6 }},            {% endif %}
-        {% if 'bjd0_uncert' in fields %}   {{ eb.bjd0_uncert|floatformat:6 }},   {% endif %}
-        {% if 'period' in fields %}        {{ eb.period|floatformat:7 }},           {% endif %}
-        {% if 'period_uncert' in fields %} {{ eb.period_uncert|floatformat:7 }},  {% endif %}
-        {% if 'morph_coeff' in fields %}   {{ eb.morph_coeff|floatformat:3 }},          {% endif %}
-        {% if 'tic__teff' in fields %}     {{ eb.tic.teff|stringformat:"0.0f" }},                {% endif %}
-        {% if 'tic__logg' in fields %}     {{ eb.tic.logg|stringformat:"2.2f" }},              {% endif %}
-        {% if 'tic__abun' in fields %}     {{ eb.tic.abun|stringformat:"2.2f" }},               {% endif %}
-        {% if 'source' in fields %}        {{ eb.source }},              {% endif %}
+        {% if 'in_catalog' in fields %}       {{ eb.in_catalog }},                      {% endif %}
+        {% if 'tic__tess_id' in fields %}     {{ eb.tic.tess_id|stringformat:"010d" }}, {% endif %}
+        {% if 'date_added' in fields %}       {{ eb.date_added|date:"o-m-d G:i:s" }},   {% endif %}
+        {% if 'date_modified' in fields %}    {{ eb.date_updated|date:"o-m-d G:i:s" }}, {% endif %}
+        {% if 'sectors' in fields %}          {{ eb.sectors.all|join:";" }},            {% endif %}
+        {% if 'tic__provenances' in fields %} {{ eb.tic.provenances.all|join:";" }},    {% endif %}
+        {% if 'tic__ra' in fields %}          {{ eb.tic.ra|stringformat:"6.6f" }},      {% endif %}
+        {% if 'tic__dec' in fields %}         {{ eb.tic.dec|stringformat:"6.6f" }},     {% endif %}
+        {% if 'tic__Tmag' in fields %}        {{ eb.tic.Tmag|stringformat:"2.2f" }},    {% endif %}
+        {% if 'tic__glon' in fields %}        {{ eb.tic.glon|stringformat:"6.6f" }},    {% endif %}
+        {% if 'tic__glat' in fields %}        {{ eb.tic.glat|stringformat:"6.6f" }},    {% endif %}
+        {% if 'tic__pmra' in fields %}        {{ eb.tic.pmra }},                        {% endif %}
+        {% if 'tic__pmdec' in fields %}       {{ eb.tic.pmdec}},                        {% endif %}
+        {% if 'bjd0' in fields %}             {{ eb.bjd0|floatformat:6 }},              {% endif %}
+        {% if 'bjd0_uncert' in fields %}      {{ eb.bjd0_uncert|floatformat:6 }},       {% endif %}
+        {% if 'period' in fields %}           {{ eb.period|floatformat:7 }},            {% endif %}
+        {% if 'period_uncert' in fields %}    {{ eb.period_uncert|floatformat:7 }},     {% endif %}
+        {% if 'morph_coeff' in fields %}      {{ eb.morph_coeff|floatformat:3 }},       {% endif %}
+        {% if 'tic__teff' in fields %}        {{ eb.tic.teff|stringformat:"0.0f" }},    {% endif %}
+        {% if 'tic__logg' in fields %}        {{ eb.tic.logg|stringformat:"2.2f" }},    {% endif %}
+        {% if 'tic__abun' in fields %}        {{ eb.tic.abun|stringformat:"2.2f" }},    {% endif %}
+        {% if 'source' in fields %}           {{ eb.source }},                          {% endif %}
         {% if 'flags' in fields %}
             {% if eb.ambiguous %}A{% endif %}{% if eb.insufficient %}I{% endif %}{% if eb.pulscomp %}P{% endif %}{% if eb.heartbeat %}H{% endif %}{% if eb.multi %}M{% endif %},
         {% endif %}
@@ -45,6 +45,6 @@
 
 {% include "catalog/ebtable.html" with ebs=page_of_EBs fields=fields %}
 
-{% endifequal %}
+{% endif %}
 
 {% endblock %}

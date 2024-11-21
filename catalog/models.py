@@ -99,10 +99,11 @@ class TIC(models.Model):
     @classmethod
     def from_mast(cls, tess_id, **kwargs):
         # if the TIC is already in the database, use it; otherwise instantiate a new one:
-        if cls.objects.filter(tess_id=tess_id).count() > 0:
-            tic = cls.objects.filter(tess_id=tess_id)[0]
-        else:
-            tic = cls(tess_id=tess_id)
+        tic, created = cls.objects.get_or_create(tess_id=tess_id)
+        # if cls.objects.filter(tess_id=tess_id).count() > 0:
+        #     tic = cls.objects.filter(tess_id=tess_id)[0]
+        # else:
+        #     tic = cls(tess_id=tess_id)
 
         mast_entry = cat.query_criteria(catalog='TIC', ID=tess_id)
 
@@ -132,15 +133,18 @@ class TIC(models.Model):
             if 'DR3' in other_id:
                 tic.gaia_dr3_id = other_id.split(' ')[2]
 
-        # note that we cannot add many-to-many fields here as the TIC is not yet saved.
-        tic.sector_list = [Sector.objects.filter(sector_id=sector)[0] for sector in tc.get_sectors(objectname=f'TIC {tess_id}')['sector']]
+        # if new TIC, save it to assign an ID:
+        if created:
+            tic.save()
 
-        # query MAST for data sources, adding them to the known provenances if necessary:
-        tic.provenance_list = []
-        observations = obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')
-        for pname in set(observations['provenance_name']):
+        # add sectors:
+        for sector_id in tc.get_sectors(objectname=f'TIC {tess_id}')['sector']:
+            tic.sectors.add(Sector.objects.filter(sector_id=sector_id)[0])
+
+        # add provenances:
+        for pname in set(obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name']):
             prov, _ = Provenance.objects.get_or_create(name=pname)
-            tic.provenance_list.append(prov)
+            tic.provenances.add(prov)
 
         # download data if requested:
         tic.download = kwargs.get('download_data', True)
@@ -148,7 +152,25 @@ class TIC(models.Model):
         if tic.download:
             tic.download_data(destination=tic.destination)
 
+        # create static files if requested:
+        tic.create_static = kwargs.get('create_static', True)
+        tic.static_dir = kwargs.get('static_dir', 'static/catalog')
+        if tic.create_static:
+            tic.create_static_files(static_dir=tic.static_dir, data_dir=tic.destination)
+
         return tic
+
+    def update_provenances(self):
+        """
+        Update available provenances from MAST.
+
+        The method assumes that the TIC instance is already in the database
+        and has a valid TESS ID.
+        """
+
+        for pname in set(obs.query_criteria(target_name=self.tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name']):
+            prov, _ = Provenance.objects.get_or_create(name=pname)
+            self.provenances.add(prov)
 
     def download_data(self, destination=None):
         download_fits(tess_id=self.tess_id, destination=destination)
@@ -307,25 +329,10 @@ class TIC(models.Model):
                 plt.ylabel('Normalized PDC flux')
                 plt.title(f'TIC {self.tess_id:010d}, period {eph.period*period_mult:0.8f} days')
                 plt.plot(phases, fluxes, 'b.')
-                plt.plot(phases[phases >  0.4]-1.0, fluxes[phases >  0.4], 'c.')
+                plt.plot(phases[phases > +0.4]-1.0, fluxes[phases > +0.4], 'c.')
                 plt.plot(phases[phases < -0.4]+1.0, fluxes[phases < -0.4], 'c.')
                 plt.savefig(f'{static_dir}/triage/tic{self.tess_id:010d}.{eph.pk}.{period_str}.phase.png')
                 plt.close()
-
-    def save(self, *args, **kwargs):
-        # overload the save() method to handle duplicates and many-to-many relationships.
-
-        # if TIC does not exist in the database, save it:
-        if TIC.objects.filter(tess_id=self.tess_id).count() == 0:
-            super(TIC, self).save()
-
-        # traverse through the sector_list and add them to many-to-many field:
-        if hasattr(self, 'sector_list'):
-            self.sectors.add(*self.sector_list)
-
-        # traverse through the provenance_list and add them to many-to-many field:
-        if hasattr(self, 'provenance_list'):
-            self.provenances.add(*self.provenance_list)
 
     def __str__(self):
         return '%10d' % self.tess_id
@@ -482,7 +489,7 @@ class EB(models.Model):
         #     p.generate_plots(self.tic.tess_id, prefix='catalog/static/catalog/images', tlc=True, plc=True, spd=True, signal_id=self.signal_id, bjd0=self.bjd0, period=self.period, filelist=filelist)
         #     # FIXME: this shouldn't be returning
         #     return
-        
+
         # if there are no args/kwargs, revert to built-in save():
         if len(args) == 0 and len(kwargs) == 0:
             super(EB, self).save()
@@ -541,7 +548,8 @@ class EB(models.Model):
         export_spd=True,
         plot_lc=True,
         plot_spd=True,
-        force_overwrite=False):
+        force_overwrite=False
+    ):
 
         times, fluxes, ferrs = read_from_all_fits(self.tic.tess_id, filelist=filelist)
         phases, freqs, lsamps, logfaps = None, None, None, None
