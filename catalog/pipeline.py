@@ -11,6 +11,7 @@ from astropy.timeseries import BoxLeastSquares as BLS
 from astroquery.mast import Observations as O
 
 from scipy.signal import lombscargle as LS
+from scipy.signal import find_peaks, peak_prominences
 from scipy.stats import exponweib
 
 DATADIR = '/home/users/andrej/projects/tess/data'
@@ -41,7 +42,7 @@ def download_fits(tess_id, destination=None):
     return manifest
 
 
-def read_from_all_fits(tess_id, data_dir=DATADIR, normalize=True, filelist=None):
+def read_from_all_fits(tess_id, data_dir=DATADIR, normalize=True, remove_nans=True, filelist=None):
     if filelist is None:
         fits_list = glob.glob(f'{data_dir}/**/*{tess_id}*lc.fits', recursive=True)
     else:
@@ -58,11 +59,15 @@ def read_from_all_fits(tess_id, data_dir=DATADIR, normalize=True, filelist=None)
             flux = hdu[1].data['PDCSAP_FLUX']
             flux_err = hdu[1].data['PDCSAP_FLUX_ERR']
 
-            cond = np.where(np.logical_and(~np.isnan(time), ~np.isnan(flux), ~np.isnan(flux_err)))
+            if remove_nans:
+                cond = np.where(np.logical_and(~np.isnan(time), ~np.isnan(flux), ~np.isnan(flux_err)))
+            else:
+                cond = slice(None)
+
             time = time[cond]
             if normalize:
-                flux_err = flux_err[cond]/flux[cond].mean()
-                flux = flux[cond]/flux[cond].mean()
+                flux_err = flux_err[cond]/np.nanmean(flux[cond])
+                flux = flux[cond]/np.nanmean(flux[cond])
             else:
                 flux_err = flux_err[cond]
                 flux = flux[cond]
@@ -81,7 +86,7 @@ def read_from_all_fits(tess_id, data_dir=DATADIR, normalize=True, filelist=None)
     return (times[s], fluxes[s], ferrs[s])
 
 
-def read_from_fits(tess_id, normalize=True):
+def read_from_fits(tess_id, normalize=True, remove_nans=True):
     filename = glob.glob('%s/*%d*fits' % (DATADIR, tess_id))[0]
 
     with fits.open(filename) as hdu:
@@ -90,11 +95,15 @@ def read_from_fits(tess_id, normalize=True):
         flux = hdu[1].data['PDCSAP_FLUX']
         flux_err = hdu[1].data['PDCSAP_FLUX_ERR']
 
-        cond = np.where(np.logical_and(~np.isnan(time), ~np.isnan(flux), ~np.isnan(flux_err)))
+        if remove_nans:
+            cond = np.where(np.logical_and(~np.isnan(time), ~np.isnan(flux), ~np.isnan(flux_err)))
+        else:
+            cond = slice(None)
+
         time = time[cond]
         if normalize:
-            flux = flux[cond]/flux[cond].mean()
-            flux_err = flux_err[cond]/flux.mean()
+            flux = flux[cond]/np.nanmean(flux[cond])
+            flux_err = flux_err[cond]/np.nanmean(flux[cond])
         else:
             flux = flux[cond]
             flux_err = flux_err[cond]
@@ -102,20 +111,70 @@ def read_from_fits(tess_id, normalize=True):
     return (time, flux, flux_err)
 
 
+def read_from_ascii(tess_id, content='lc', prefix='catalog/static/catalog'):
+    if content == 'lc':
+        filename = f'{prefix}/lc_data/tic{tess_id:010d}.norm.lc'
+        time, flux, ferr = np.loadtxt(filename, usecols=(0, 1, 2), unpack=True)
+        return time, flux, ferr
+    elif content == 'spd':
+        filename = f'{prefix}/spd_data/tic{tess_id:010d}.ls.spd'
+        freq, power, logfap = np.loadtxt(filename, usecols=(0, 1, 2), unpack=True)
+        return freq, power, logfap
+    else:
+        raise ValueError('Invalid content type.')
+
+
 def bjd2phase(times, bjd0, period, pshift=0.0):
     phases = -0.5+((times-bjd0-(pshift+0.5)*period) % period) / period
     return phases
 
 
+def estimate_period(time, flux, window):
+    """
+    Estimate period of a light curve using the autocorrelation function.
+
+    Parameters
+    ----------
+    time : ndarray
+        Time array.
+    flux : ndarray
+        Flux array.
+    window : float
+        Window size for the template.
+
+    Returns
+    -------
+    period : float
+        Estimated period.
+    """
+    dtime = np.diff(time)
+    gaps = np.where(dtime > 1.1 * np.min(dtime))[0]  # not used at present, but it should be used to remove gaps
+    dflux = np.diff(flux)
+    segment = time[:-1] < time[0] + window
+    template = dflux[segment]
+    acorr = np.correlate(dflux, template, mode='valid')
+    peaks = find_peaks(acorr, height=0.0)
+    prominences, _, _ = peak_prominences(acorr, peaks[0])
+    peaks = find_peaks(acorr, height=0.0, prominence=np.mean(prominences))
+    period = 2 * np.mean(np.diff(peaks[0])) * dtime[0]
+    return period
+
+
 def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
-    freq = np.linspace(1./pmax, 1./pmin, int((1/pmin - 1/pmax)/pstep))
-    power = LS(time, flux, freq, normalize='standard')
+    wmin = 2*np.pi/pmax
+    wmax = 2*np.pi/pmin
+    wstep = 2*np.pi*pstep/pmin/pmax
+
+    w = np.arange(wmin, wmax, wstep)
+
+    flux = (flux - np.mean(flux))/np.std(flux)
+    power = LS(time, flux, w, normalize=False)
     logfap = np.log10(1.0 - exponweib.cdf(power, a=1.0, c=1.0, loc=0.0, scale=1.0))
 
     # Find peaks
     if npeaks > 0:
         peak_indices = (-power).argsort()[:npeaks]
-        peak_freqs = freq[peak_indices]
+        peak_freqs = w[peak_indices]
         peak_powers = power[peak_indices]
         peak_periods = 1.0/peak_freqs
     else:
@@ -124,7 +183,8 @@ def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
         peak_periods = []
 
     return {
-        'freq': freq,
+        'freq': w,
+        'period': 2*np.pi/w,
         'power': power,
         'logfap': logfap,
         'peak_frequencies': peak_freqs,
