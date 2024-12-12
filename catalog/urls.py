@@ -4,7 +4,7 @@ from django.views.generic import TemplateView, DetailView
 from . import views
 
 urlpatterns = [
-	path('', views.MainView.as_view(), name='main'),
+    path('', views.MainView.as_view(), name='main'),
     path('<int:tess_id>.<int:signal_id>', views.DetailsView.as_view(), name='details'),
     path('<int:tess_id>', views.DetailsView.as_view(), name='details'),
     path('about', TemplateView.as_view(template_name='static/about.html'), name='about'),
@@ -13,10 +13,14 @@ urlpatterns = [
     path('support', views.SupportPDF.as_view(), name='letter_of_support'),
     path('search', views.SearchView.as_view(), name='search'),
     path('search_results', views.SearchResultsView.as_view(), name='search_results'),
+    path('ephem/<int:tess_id>', views.EphemView.as_view(), name='ephemeris_inspector'),
     path('triage', views.react_triage),
     path('triage/<int:tess_id>', views.react_triage),
     path('triage_done', TemplateView.as_view(template_name='static/triage_done.html'), name='triage_done'),
-    #path('triage/user', views.react_triage),
+
+    path('api/ephem/add', views.ApiEphemAddView.as_view(), name='add_ephemeris'),
+    path('api/lombscargle', views.ApiLombScargleView.as_view(), name='lombscargle'),
+
     path('api/triage/next', views.api_triage_next),
     path('api/triage/ephem/<int:tess_id>/<str:username>', views.api_triage_ephem),
     path('api/triage/ephem/<int:tess_id>', views.api_triage_ephem),

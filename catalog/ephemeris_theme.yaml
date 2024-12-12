@@ -1,0 +1,86 @@
+attrs:
+    Title:
+        text_font_size: 12pt
+    Axis:
+        axis_label_text_font_size: 14pt
+        major_label_text_font_size: 14pt
+    Div:
+        width: 250
+        height: 70
+        styles:
+            background: "#DDDDDD"
+            color: "#DD0000"
+            text-align: center
+            font-size: 12pt
+            font-family: times
+            font-weight: bold
+            border: 1px solid black
+            border-radius: 4px
+            padding: 4px 6px 6px 6px
+            margin: 4px
+    Spinner:
+        width: 250
+        height: 70
+        styles:
+            background: "#94b7d7"
+            color: black
+            font-size: 12pt
+            font-family: times
+            font-weight: bold
+            border: 1px solid black
+            border-radius: 4px
+            padding: 4px 6px 6px 6px
+            margin: 4px
+    Select:
+        width: 250
+        height: 70
+        styles:
+            background: "#94b7d7"
+            color: black
+            font-size: 12pt
+            font-family: times
+            font-weight: bold
+            border: 1px solid black
+            border-radius: 4px
+            padding: 4px 6px 6px 6px
+            margin: 4px
+    # Button:
+    #     width: 250
+    #     height: 70
+    #     styles:
+    #         background: "#94b7d7"
+    #         font-size: 12pt
+    #         font-family: times
+    #         font-weight: bold
+    #         border: 1px solid black
+    #         border-radius: 4px
+    #         padding: 4px 6px 6px 6px
+    #         margin: 4px
+    HelpButton:
+        styles:
+            color: black
+            border: 1px solid black
+            border-radius: 4px
+    TextInput:
+        width: 250
+        height: 70
+        styles:
+            background: "#94b7d7"
+            color: black
+            font-size: 12pt
+            font-family: times
+            font-weight: bold
+            border: 1px solid black
+            border-radius: 4px
+            padding: 4px 6px 6px 6px
+            margin: 4px
+    Dialog:
+        styles:
+            max-width: 535px
+            max-height: 368px
+            # position: sticky
+            # left: 200px
+            # top: 55%
+            font-size: 12pt
+            margin: 4px
+            padding: 4px 6px 6px 6px

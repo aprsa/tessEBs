@@ -1,7 +1,7 @@
 from django.db import models
 from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
 from astroquery.simbad import Simbad as sbd
-from .pipeline import download_fits, read_from_all_fits, run_lombscargle, bjd2phase
+from .pipeline import download_fits, read_from_all_fits, run_lombscargle, run_bls, bjd2phase
 
 import os
 import numpy as np
@@ -98,13 +98,34 @@ class TIC(models.Model):
 
     @classmethod
     def from_mast(cls, tess_id, **kwargs):
+        """
+        Pulls the TIC data from MAST and creates a new instance of the TIC class.
+        If the TIC is already in the database, it will update the information
+        from MAST.
+
+        Parameters
+        ----------
+        tess_id : int, required
+            TESS ID of the target star.
+        download_data : bool, optional, default True
+            If True, the method will download the data from MAST.
+        download_path : str, optional, default './'
+            The root directory where the data will be downloaded.
+        create_static : bool, optional, default True
+            If True, the method will create static files for the target.
+        static_dir : str, optional, default 'static/catalog'
+            The directory where the static files will be stored.
+        overwrite_static_files : bool, optional, default False
+            If True, the method will overwrite existing static files.
+
+        Returns
+        -------
+        TIC instance
+            An instance of the TIC class with the data from MAST.
+        """
+
         # if the TIC is already in the database, use it; otherwise instantiate a new one:
         tic, created = cls.objects.get_or_create(tess_id=tess_id)
-        # if cls.objects.filter(tess_id=tess_id).count() > 0:
-        #     tic = cls.objects.filter(tess_id=tess_id)[0]
-        # else:
-        #     tic = cls(tess_id=tess_id)
-
         mast_entry = cat.query_criteria(catalog='TIC', ID=tess_id)
 
         def get(entry, key):
@@ -155,8 +176,10 @@ class TIC(models.Model):
         # create static files if requested:
         tic.create_static = kwargs.get('create_static', True)
         tic.static_dir = kwargs.get('static_dir', 'static/catalog')
+        overwrite = kwargs.get('overwrite_static_files', False)
+
         if tic.create_static:
-            tic.create_static_files(static_dir=tic.static_dir, data_dir=tic.destination)
+            tic.create_static_files(static_dir=tic.static_dir, data_dir=tic.destination, force_overwrite=overwrite)
 
         return tic
 
@@ -174,6 +197,58 @@ class TIC(models.Model):
 
     def download_data(self, destination=None):
         download_fits(tess_id=self.tess_id, destination=destination)
+
+    def get_lightcurve(self, provenance=None, static_dir='static/catalog', data_dir='static/catalog/mastDownload', filelist=None):
+        """
+        Get the lightcurve data for the TIC.
+
+        The method will first try to query a local ascii file (which would
+        have been created by calling `create_static_files()` or
+        `from_mast(create_static=True)` methods). If the file is not found, it
+        will read the data from fits files in the `data_dir` directory.
+
+        Arguments:
+        ---------
+        provenance : str
+            The provenance name to select the data from. If None, the method
+            will return mission short cadence data.
+        static_dir : str
+            The directory where the static files are stored.
+        data_dir : str
+            The directory where the fits files are stored.
+        filelist : list
+            A cached list of fits files. If None, the method will scan
+            `data_dir` for the files.
+        """
+        # TODO: implement provenance selection
+        if provenance is not None:
+            raise NotImplementedError('provenance selection is not yet implemented.')
+
+        try:
+            lcfn = os.path.join(os.path.abspath(static_dir), 'lc_data', f'tic{self.tess_id:010d}.norm.lc')
+            return np.loadtxt(lcfn, unpack=True)
+        except FileNotFoundError:
+            return read_from_all_fits(self.tess_id, data_dir=data_dir, filelist=filelist)
+
+    def run_bls(self, pmin=0.5, pmax=10.0, duration=0.5, min_eclipses=3):
+        times, fluxes, ferrs = self.get_lightcurve()
+        if times is None:
+            raise ValueError(f'no fits data found for TIC {self.tess_id:010d}.')
+
+        # run BLS:
+        periodogram, stats = run_bls(times, fluxes, ferrs, pmin, duration)
+
+        # find the time of the first eclipse:
+        # bjd0 = times[0] + period*(times[0]-times[0]//period)
+
+        # find the log-likelihood for the first eclipse:
+        # bls_logp = logfaps[max_power_idx]
+
+        # instantiate the BLS_run instance:
+        # bls_run = BLS_run(tic=self, duration=duration, min_eclipses=min_eclipses, pmin=pmin, pmax=pmax, bjd0=bjd0, period=period, max_power=max_power, bls_logp=bls_logp)
+        # bls_run.save()
+
+        # return bls_run
 
     @classmethod
     def add_to_triage(cls, tess_id, ephemeris, source):
@@ -260,6 +335,39 @@ class TIC(models.Model):
         return tic
 
     def create_static_files(self, static_dir='static/catalog', data_dir='./', filelist=None, export_lc=True, export_spd=True, plot_lc=True, plot_spd=True, force_overwrite=False):
+        """
+        Create static files for the TIC. Static files include:
+        * lightcurve data (ascii, in `lc_data` directory)
+        * spectral power density data (ascii, in `spd_data` directory)
+        * lightcurve plots (png, in `lc_figs` directory)
+        * spectral power density plots (png, in `spd_figs` directory)
+
+        Parameters
+        ----------
+        static_dir : str, optional, default 'static/catalog'
+            The root directory where the static files will be stored.
+        data_dir : str, optional, default './'
+            The directory where the fits files are stored.
+        filelist : list, optional, default None
+            A precompiled list of fits files. If None, the method will scan
+            `data_dir` for the files.
+        export_lc : bool, optional, default True
+            If True, the method will export the lightcurve data.
+        export_spd : bool, optional, default True
+            If True, the method will export the spectral power density data.
+        plot_lc : bool, optional, default True
+            If True, the method will generate lightcurve plots.
+        plot_spd : bool, optional, default True
+            If True, the method will generate spectral power density plots.
+        force_overwrite : bool, optional, default False
+            If True, the method will overwrite existing files.
+
+        Raises
+        ------
+        ValueError
+            If no fits data are found for the TIC.
+        """
+
         times, fluxes, ferrs = read_from_all_fits(self.tess_id, data_dir=data_dir, filelist=filelist)
         if times is None:
             raise ValueError(f'no fits data found for TIC {self.tess_id:010d}.')
@@ -291,8 +399,8 @@ class TIC(models.Model):
             spdfn = f'{static_dir}/spd_data/tic{self.tess_id:010d}.ls.spd'
             # if force_overwrite or not os.path.isfile(spdfn):
             pmin = 1/24  # 1 hour
-            pmax = 0.5*(times[-1]-times[0])  # half the duration of the data
-            pstep = 0.001
+            pmax = 27.0  # TESS sector length
+            pstep = 0.0007  # 1 minute
 
             rv = run_lombscargle(times, fluxes, ferrs, pmin, pmax, pstep)
             freqs, lsamps, logfaps = rv['freq'], rv['power'], rv['logfap']
@@ -650,6 +758,23 @@ class EB(models.Model):
 
 
 class EphemerisSource(models.Model):
+    """
+    Ephemeris source model.
+    
+    The model is used to store information about the source of the ephemerides.
+    
+    Attributes
+    ----------
+    model : str
+        The model used to generate the ephemerides.
+    version : str
+        The version of the model.
+    author : str
+        The author of the model.
+    reference : str
+        The reference (publication) to the model.
+    """
+
     model = models.CharField(max_length=16)
     version = models.CharField(max_length=16, null=True, blank=True)
     author = models.CharField(max_length=64)
@@ -669,7 +794,7 @@ class EphemerisSource(models.Model):
 
 class Ephemeris(models.Model):
     date_added = models.DateTimeField('date added', auto_now_add=True)
-    source = models.ManyToManyField(EphemerisSource)
+    source = models.ForeignKey(EphemerisSource, on_delete=models.CASCADE)
 
     tic = models.ForeignKey(TIC, related_name='ephemerides', on_delete=models.CASCADE)
     # eb = models.ForeignKey(EB, related_name='ephemerides', on_delete=models.CASCADE)
@@ -693,7 +818,9 @@ class Ephemeris(models.Model):
     def __repr__(self):
         return (
             f"<Ephemeris(date_added={self.date_added}, "
-            f"tic={self.tic}, bjd0={self.bjd0}, "
+            f"source={self.source}, "
+            f"tic={self.tic}, "
+            f"bjd0={self.bjd0}, "
             f"bjd0_uncert={self.bjd0_uncert}, "
             f"period={self.period}, "
             f"period_uncert={self.period_uncert}, "

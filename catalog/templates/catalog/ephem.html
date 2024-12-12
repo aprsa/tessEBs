@@ -1,0 +1,27 @@
+{% extends "catalog/base.html" %}
+
+{% load static %}
+
+{% block title %}TIC {{ tess_id }} triage page{% endblock %}
+
+{% block extra_header %}
+<link href=”http://cdn.pydata.org/bokeh/release/bokeh-3.6.2.min.css" rel=”stylesheet” type=”text/css”>
+<link href=”http://cdn.pydata.org/bokeh/release/bokeh-widgets-3.6.2.min.css" rel=”stylesheet” type=”text/css”>
+
+<script src="/static/bokeh/bokeh.min.js"></script>
+<script src="/static/bokeh/bokeh-widgets.js"></script>
+<script src="/static/bokeh/bokeh-tables.js"></script>
+<script src="/static/bokeh/bokeh-api.js"></script>
+
+<!-- <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.6.2.min.js"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.6.2.min.js"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.6.2.min.js"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.6.2.min.js"></script> -->
+{% endblock %}
+
+{% block content %}
+
+    {{ bokeh_div | safe }}
+    {{ bokeh_script | safe }}
+
+{% endblock %}

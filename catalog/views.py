@@ -3,19 +3,23 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import re
 import csv
+import json
 
 import numpy as np
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, FileResponse
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 
 from csv_export.views import CSVExportView
 
-from django.views.generic import TemplateView, ListView
+from django.views.generic import View, TemplateView, ListView
 from django.views.generic.detail import BaseDetailView
 
+from . import pipeline as pl
+from .ephemeris_ui import create_ephemeris_ui
 from .models import EB, TIC, Ephemeris, EphemerisSource, Comment
 from .forms import ChangeForm
 
@@ -217,6 +221,77 @@ class SearchResultsView(ListView):
         return self.object_list
 
 
+class EphemView(TemplateView):
+    template_name = 'catalog/ephem.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tess_id = context.get('tess_id', None)
+        signal_id = context.get('signal_id', 1)
+
+        script, div = create_ephemeris_ui(tess_id)
+
+        context['signal_id'] = signal_id
+        context['tic'] = TIC.objects.filter(tess_id=tess_id)[0]
+        context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
+
+        context['bokeh_script'] = script
+        context['bokeh_div'] = div
+
+        return context
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApiEphemAddView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            
+            t0 = data.get('t0')
+            period = data.get('period')
+            model = data.get('model')
+            version = data.get('version')
+            reference = data.get('reference')
+            attribution = data.get('attribution')
+
+            # * run get_or_create(EphemerisSource)
+            # * instantiate a new Ephemeris
+            # * save it to database
+
+            return JsonResponse({
+                'status': 'success',
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'failure',
+                'error': str(e)
+            }, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApiLombScargleView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+
+            time = np.array(data.get('time'))
+            flux = np.array(data.get('flux'))
+            ferr = None
+            pmin = data.get('pmin', 0.1)
+            pmax = data.get('pmax', 10.0)
+            pstep = data.get('pstep', 0.001)
+            npeaks = data.get('npeaks', 0)
+
+            pgram = pl.run_lombscargle(time, flux, ferr, pmin, pmax, pstep, npeaks)
+
+            return JsonResponse({
+                'period': pgram['period'].tolist(),
+                'power': pgram['power'].tolist()
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
 def profile(request):
     context = {}
     return render(request, 'registration/profile.html', context)
@@ -409,7 +484,7 @@ def api_data_lc(request, tess_id):
 
 def api_data_periodogram(request, tess_id):
     # TODO: optimize this by downsampling the original files so we can just load and serve
-    freq, lsamp, lsfap = np.loadtxt('spds_ascii/tic%010d.norm.lc.ls' % (tess_id), unpack=True)
+    freq, lsamp, lsfap = np.loadtxt('catalog/static/catalog/spd_data/tic%010d.ls.spd' % (tess_id), unpack=True)
 
     # distance may need to be changed if the input is downsampled, its in units of the freq step
     peaks_inds, props = find_peaks(lsamp, height=0.001, distance=10)
