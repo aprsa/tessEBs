@@ -14,12 +14,16 @@ urlpatterns = [
     path('search', views.SearchView.as_view(), name='search'),
     path('search_results', views.SearchResultsView.as_view(), name='search_results'),
     path('ephem/<int:tess_id>', views.EphemView.as_view(), name='ephemeris_inspector'),
+    path('add_tic/<int:tess_id>', views.AddTICView.as_view(), name='add_tic'),
     path('triage', views.react_triage),
     path('triage/<int:tess_id>', views.react_triage),
     path('triage_done', TemplateView.as_view(template_name='static/triage_done.html'), name='triage_done'),
 
+    path('api/query/<int:tess_id>', views.ApiQueryView.as_view(), name='query_mast'),
+    path('api/tic/add', views.ApiTicAddView.as_view(), name='add_or_update_tic'),
     path('api/ephem/add', views.ApiEphemAddView.as_view(), name='add_ephemeris'),
     path('api/lombscargle', views.ApiLombScargleView.as_view(), name='lombscargle'),
+    path('api/static/create/<int:tess_id>', views.ApiStaticCreateView.as_view(), name='create_static_files'),
 
     path('api/triage/next', views.api_triage_next),
     path('api/triage/ephem/<int:tess_id>/<str:username>', views.api_triage_ephem),

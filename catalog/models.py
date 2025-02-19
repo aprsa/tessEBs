@@ -1,11 +1,15 @@
 from django.db import models
 from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
 from astroquery.simbad import Simbad as sbd
-from .pipeline import download_fits, read_from_all_fits, run_lombscargle, run_bls, bjd2phase
+from .pipeline import download_fits, load_data, run_lombscargle, run_bls, bjd2phase
+from .provenances import get_provenance
 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+from astropy.io import fits
+from astropy.table import Table
 
 
 class Sector(models.Model):
@@ -146,13 +150,14 @@ class TIC(models.Model):
 
         # query simbad for other designations:
         other_ids = sbd.query_objectids(f'TIC {tess_id}')
-        for other_id in other_ids['ID']:
-            if 'ASAS' in other_id:
-                tic.asas_id = other_id.split(' ')[1]
-            if 'KIC' in other_id:
-                tic.kepler_id = other_id.split(' ')[1]
-            if 'DR3' in other_id:
-                tic.gaia_dr3_id = other_id.split(' ')[2]
+        if other_ids:
+            for other_id in other_ids['ID']:
+                if 'ASAS' in other_id:
+                    tic.asas_id = other_id.split(' ')[1]
+                if 'KIC' in other_id:
+                    tic.kepler_id = other_id.split(' ')[1]
+                if 'DR3' in other_id:
+                    tic.gaia_dr3_id = other_id.split(' ')[2]
 
         # if new TIC, save it to assign an ID:
         if created:
@@ -183,6 +188,48 @@ class TIC(models.Model):
 
         return tic
 
+    def query_mast(self):
+        meta = dict()
+
+        def query(entry, key):
+            return entry[key][0] if ~np.isnan(entry[key][0]) else None
+
+        mast_entry = cat.query_criteria(catalog='TIC', ID=self.tess_id)
+        if len(mast_entry) == 0:
+            meta['status'] = f'no data found for TIC {self.tess_id}'
+            return meta
+
+        meta['status'] = 'success'
+        meta['ra'] = query(mast_entry, 'ra')
+        meta['dec'] = query(mast_entry, 'dec')
+        meta['glon'] = query(mast_entry, 'gallong')
+        meta['glat'] = query(mast_entry, 'gallat')
+        meta['Tmag'] = query(mast_entry, 'Tmag')
+        meta['teff'] = query(mast_entry, 'Teff')
+        meta['logg'] = query(mast_entry, 'logg')
+        meta['abun'] = query(mast_entry, 'MH')
+        meta['pmra'] = query(mast_entry, 'pmRA')
+        meta['pmdec'] = query(mast_entry, 'pmDEC')
+        meta['gaia_id'] = int(mast_entry['GAIA'][0]) if mast_entry['GAIA'].tolist()[0] is not None else None
+        
+        other_ids = sbd.query_objectids(f'TIC {self.tess_id}')
+        if other_ids:
+            for other_id in other_ids['ID']:
+                if 'ASAS' in other_id:
+                    meta['asas_id'] = other_id.split(' ')[1]
+                if 'KIC' in other_id:
+                    meta['kepler_id'] = other_id.split(' ')[1]
+                if 'DR3' in other_id:
+                    meta['gaia_dr3_id'] = other_id.split(' ')[2]
+
+        sectors = tc.get_sectors(objectname=f'TIC {self.tess_id}')
+        meta['sectors'] = [int(sector_id) for sector_id in sectors['sector']]
+
+        provenances = set(obs.query_criteria(target_name=self.tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name'])
+        meta['provenances'] = [str(provenance) for provenance in provenances]
+
+        return meta
+
     def update_provenances(self):
         """
         Update available provenances from MAST.
@@ -195,40 +242,68 @@ class TIC(models.Model):
             prov, _ = Provenance.objects.get_or_create(name=pname)
             self.provenances.add(prov)
 
-    def download_data(self, destination=None):
-        download_fits(tess_id=self.tess_id, destination=destination)
+    def download_data(self, destination=None, **kwargs):
+        # typical kwargs are obs_collection and provenance_name.
+        return download_fits(tess_id=self.tess_id, destination=destination, **kwargs)
 
-    def get_lightcurve(self, provenance=None, static_dir='static/catalog', data_dir='static/catalog/mastDownload', filelist=None):
+    def syndicate_data(self, data_dir='static/catalog/lc_data'):
+        # the method assumes that provenances are up to date.
+        if self.provenances.count() == 0:
+            raise ValueError(f'no provenances found for TIC {self.tess_id:010d}')
+
+        header = fits.Header()
+        header['timestmp'] = time.ctime()  # for versioning purposes
+        header['provs'] = ','.join([prov.name for prov in self.provenances.all()])
+        hdus = [fits.PrimaryHDU(header=header),]
+
+        for provenance in self.provenances.all():
+            provenance = get_provenance(provenance.name)
+            provenance.download(tess_id=self.tess_id)
+            data = provenance.lc(tic=self)
+            lc = np.array(data, dtype=np.float64).T
+            hdus.append(fits.table_to_hdu(Table(lc, names=('times', 'fluxes', 'ferrs'), meta={'extname': provenance.name})))
+
+        fits.HDUList(hdus).writeto(f'{data_dir}/tic{self.tess_id:010d}.fits', overwrite=True)
+
+    def attach_spds_to_data(self, data_dir='static/catalog/lc_data'):
+        # the method assumes that provenances are up to date.
+        if self.provenances.count() == 0:
+            raise ValueError(f'no provenances found for TIC {self.tess_id}')
+
+        with fits.open(f'{data_dir}/tic{self.tess_id:010d}.fits', mode='update') as hdul:
+            for provenance in [p.name for p in self.provenances.all()]:
+                spd = run_lombscargle(hdul[provenance].data)
+                spd = np.vstack((spd['periods'], spd['powers'])).T
+
+                # remove any old SPD data:
+                if provenance+'-SPD' in hdul:
+                    hdul.pop(provenance+'-SPD')
+
+                hdul.append(fits.table_to_hdu(Table(spd, names=('periods', 'powers'), meta={'extname': provenance+'-SPD'})))
+
+    def get_lightcurve(self, provenance=None):
         """
-        Get the lightcurve data for the TIC.
-
-        The method will first try to query a local ascii file (which would
-        have been created by calling `create_static_files()` or
-        `from_mast(create_static=True)` methods). If the file is not found, it
-        will read the data from fits files in the `data_dir` directory.
+        Get the syndicated lightcurve data for the TIC.
 
         Arguments:
         ---------
         provenance : str
-            The provenance name to select the data from. If None, the method
-            will return mission short cadence data.
-        static_dir : str
-            The directory where the static files are stored.
-        data_dir : str
-            The directory where the fits files are stored.
-        filelist : list
-            A cached list of fits files. If None, the method will scan
-            `data_dir` for the files.
+            The provenance name to select the data from. If None, the
+            provenance will default to the first one in the list.
         """
-        # TODO: implement provenance selection
-        if provenance is not None:
-            raise NotImplementedError('provenance selection is not yet implemented.')
+        return load_data(self.tess_id, provenance=provenance)
 
-        try:
-            lcfn = os.path.join(os.path.abspath(static_dir), 'lc_data', f'tic{self.tess_id:010d}.norm.lc')
-            return np.loadtxt(lcfn, unpack=True)
-        except FileNotFoundError:
-            return read_from_all_fits(self.tess_id, data_dir=data_dir, filelist=filelist)
+    def get_spd(self, provenance=None):
+        """
+        Get the syndicated spectral power density data for the TIC.
+
+        Arguments:
+        ---------
+        provenance : str
+            The provenance name to select the data from. If None, the
+            provenance will default to the first one in the list.
+        """
+        return load_data(self.tess_id, datatype='spd', provenance=provenance)
 
     def run_bls(self, pmin=0.5, pmax=10.0, duration=0.5, min_eclipses=3):
         times, fluxes, ferrs = self.get_lightcurve()
@@ -334,11 +409,9 @@ class TIC(models.Model):
 
         return tic
 
-    def create_static_files(self, static_dir='static/catalog', data_dir='./', filelist=None, export_lc=True, export_spd=True, plot_lc=True, plot_spd=True, force_overwrite=False):
+    def create_static_files(self, static_dir='static/catalog', provenance=None, plot_lc=True, plot_spd=True, force_overwrite=False):
         """
         Create static files for the TIC. Static files include:
-        * lightcurve data (ascii, in `lc_data` directory)
-        * spectral power density data (ascii, in `spd_data` directory)
         * lightcurve plots (png, in `lc_figs` directory)
         * spectral power density plots (png, in `spd_figs` directory)
 
@@ -346,15 +419,9 @@ class TIC(models.Model):
         ----------
         static_dir : str, optional, default 'static/catalog'
             The root directory where the static files will be stored.
-        data_dir : str, optional, default './'
-            The directory where the fits files are stored.
-        filelist : list, optional, default None
-            A precompiled list of fits files. If None, the method will scan
-            `data_dir` for the files.
-        export_lc : bool, optional, default True
-            If True, the method will export the lightcurve data.
-        export_spd : bool, optional, default True
-            If True, the method will export the spectral power density data.
+        provenance : str, optional, default None
+            The provenance name to select the data from. If None, all
+            provenances will be used.
         plot_lc : bool, optional, default True
             If True, the method will generate lightcurve plots.
         plot_spd : bool, optional, default True
@@ -368,52 +435,50 @@ class TIC(models.Model):
             If no fits data are found for the TIC.
         """
 
-        times, fluxes, ferrs = read_from_all_fits(self.tess_id, data_dir=data_dir, filelist=filelist)
-        if times is None:
-            raise ValueError(f'no fits data found for TIC {self.tess_id:010d}.')
-
-        if export_lc:
-            # lightcurve data:
-            lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
-            if force_overwrite or not os.path.isfile(lcfn):
-                np.savetxt(lcfn, np.vstack((times, fluxes, ferrs)).T)
+        provenances = [provenance] if provenance is not None else [p.name for p in self.provenances.all()]
 
         if plot_lc:
-            plt.figure('lcfig', figsize=(16, 5))
-            plt.xlabel('Truncated Barycentric Julian Date')
-            plt.ylabel('Normalized PDC flux')
-            plt.plot(times, fluxes, 'b.')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tess_id:010d}.lc.png')
-            plt.close()
+            for provenance in provenances:
+                fname = f'{static_dir}/lc_figs/tic{self.tess_id:010d}.{provenance}.lc.png'
+                if os.path.exists(fname) and not force_overwrite:
+                    continue
 
-            flt = times < times[0] + 10  # first 10 days of data
-            plt.figure('zlcfig', figsize=(16, 5))
-            plt.xlabel('Truncated Barycentric Julian Date')
-            plt.ylabel('Normalized PDC flux')
-            plt.plot(times[flt], fluxes[flt], 'b.')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tess_id:010d}.zlc.png')
-            plt.close()
+                data = self.get_lightcurve(provenance=provenance)
+                if len(data) <= 1:
+                    continue
 
-        if export_spd:
-            # spectral power density data:
-            spdfn = f'{static_dir}/spd_data/tic{self.tess_id:010d}.ls.spd'
-            # if force_overwrite or not os.path.isfile(spdfn):
-            pmin = 1/24  # 1 hour
-            pmax = 27.0  # TESS sector length
-            pstep = 0.0007  # 1 minute
+                plt.figure('lcfig', figsize=(16, 5))
+                plt.xlabel('Truncated Barycentric Julian Date')
+                plt.ylabel('Normalized PDC flux')
+                plt.plot(data['times'], data['fluxes'], 'b.')
+                plt.savefig(fname)
+                plt.close()
 
-            rv = run_lombscargle(times, fluxes, ferrs, pmin, pmax, pstep)
-            freqs, lsamps, logfaps = rv['freq'], rv['power'], rv['logfap']
-            np.savetxt(spdfn, np.vstack((freqs, lsamps, logfaps)).T)
+                flt = data['times'] < data['times'][0] + 10  # first 10 days of data
+                plt.figure('zlcfig', figsize=(16, 5))
+                plt.xlabel('Truncated Barycentric Julian Date')
+                plt.ylabel('Normalized PDC flux')
+                plt.plot(data['times'][flt], data['fluxes'][flt], 'b.')
+                plt.savefig(f'{static_dir}/lc_figs/tic{self.tess_id:010d}.{provenance}.zlc.png')
+                plt.close()
 
         if plot_spd:
-            plt.figure('spfig', figsize=(8, 5))
-            plt.yscale('log')
-            plt.xlabel('Frequency [c/d]')
-            plt.ylabel('Lomb-Scargle amplitude (log scale)')
-            plt.plot(freqs, lsamps, 'b-')
-            plt.savefig(f'{static_dir}/spd_figs/tic{self.tess_id:010d}.spd.png')
-            plt.close()
+            for provenance in provenances:
+                fname = f'{static_dir}/spd_figs/tic{self.tess_id:010d}.{provenance}.spd.png'
+                if os.path.exists(fname) and not force_overwrite:
+                    continue
+
+                data = self.get_spd(provenance=provenance)
+                if np.all(np.isnan(data['powers'])):
+                    continue
+
+                plt.figure('spfig', figsize=(8, 5))
+                plt.yscale('log')
+                plt.xlabel('Period [d]')
+                plt.ylabel('Lomb-Scargle power (log scale)')
+                plt.plot(data['periods'], data['powers'], 'b-')
+                plt.savefig(f'{static_dir}/spd_figs/tic{self.tess_id:010d}.{provenance}.spd.png')
+                plt.close()
 
     def prep_for_triage(self, static_dir='static/catalog', filelist=None, ephemerides=None):
         lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
@@ -648,76 +713,33 @@ class EB(models.Model):
                 self.sectors.add(sector)
             return
 
-    def create_static_files(
-        self,
-        filelist=None,
-        static_dir='static/catalog',
-        export_lc=True,
-        export_spd=True,
-        plot_lc=True,
-        plot_spd=True,
-        force_overwrite=False
-    ):
+    def create_static_files(self, static_dir='static/catalog', provenance=None, plot_ph=True, force_overwrite=False):
+        provenances = [provenance] if provenance is not None else [p.name for p in self.tic.provenances.all()]
 
-        times, fluxes, ferrs = read_from_all_fits(self.tic.tess_id, filelist=filelist)
-        phases, freqs, lsamps, logfaps = None, None, None, None
+        if plot_ph:
+            bjd0 = self.bjd0 if self.bjd0 is not None else 0.0
+            period = self.period if self.period is not None else 1.0
 
-        if times is None:
-            raise ValueError(f'no CTL fits data found for TIC {self.tic.tess_id:010d}.')
+            for provenance in provenances:
+                fname = f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.{provenance}.ph.png'
+                if os.path.exists(fname) and not force_overwrite:
+                    continue
 
-        bjd0 = self.bjd0 if self.bjd0 is not None else 0.0
-        period = self.period if self.period is not None else times[-1]-times[0]
+                data = self.tic.get_lightcurve(provenance=provenance)
+                if len(data) <= 1:
+                    continue
 
-        if export_lc:
-            # lightcurve data:
-            lcfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.norm.lc'
-            if force_overwrite or not os.path.isfile(lcfn):
-                phases = -0.5 + ((times-bjd0-period/2) % period) / period
-                np.savetxt(lcfn, np.vstack((times, phases, fluxes, ferrs)).T)
+                phases = bjd2phase(times=data['times'], bjd0=bjd0, period=period)
 
-        if export_spd:
-            spdfn = f'{static_dir}/lc_data/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.norm.lc.ls'
-            if force_overwrite or not os.path.isfile(spdfn):
-                pmin = 60/1440
-                pmax = 0.5*(times[-1]-times[0])
-                pstep = (times[-1]-times[0])*(1/pmin-1/pmax)/10000
-
-                rv = run_lombscargle(times, fluxes, ferrs, pmin, pmax, pstep, 1)
-                freqs, lsamps, logfaps = rv['freq'], rv['ls'], rv['logfap']
-                np.savetxt(spdfn, np.vstack((freqs, lsamps, logfaps)).T)
-
-        if plot_lc:
-            plt.figure('lcfig', figsize=(16, 5))
-            plt.xlabel('Truncated Barycentric Julian Date')
-            plt.ylabel('Normalized PDC flux')
-            plt.plot(times, fluxes, 'b.')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.lc.png')
-            plt.close()
-
-            flt = times < times[0] + min(10*period, 28)
-            plt.figure('zlcfig', figsize=(16, 5))
-            plt.xlabel('Truncated Barycentric Julian Date')
-            plt.ylabel('Normalized PDC flux')
-            plt.plot(times[flt], fluxes[flt], 'b.')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.zlc.png')
-            plt.close()
-
-            plt.figure('phfig', figsize=(8, 5))
-            plt.title(f'Ephemeris: {bjd0:.4f} + E x {period:.4f}')
-            plt.xlabel('Orbital phase')
-            plt.ylabel('Normalized PDC flux')
-            plt.plot(phases, fluxes, 'b.')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.{self.signal_id:02d}.ph.png')
-            plt.close()
-
-        if plot_spd:
-            plt.figure('spfig', figsize=(8, 5))
-            plt.yscale('log')
-            plt.xlabel('Frequency [c/d]')
-            plt.ylabel('Lomb-Scargle amplitude (log scale)')
-            plt.plot(freqs, lsamps, 'b-')
-            plt.savefig(f'{static_dir}/lc_figs/tic{self.tic.tess_id:010d}.spd.png')
-            plt.close()
+                plt.figure('phfig', figsize=(8, 5))
+                plt.xlabel('Phase')
+                plt.ylabel('Normalized PDC flux')
+                plt.title(f'TIC {self.tic.tess_id:010d}, period {self.period:0.4f} days')
+                plt.plot(phases, data['fluxes'], 'b.')
+                plt.plot(phases[phases > +0.4]-1.0, data['fluxes'][phases > +0.4], 'b.')
+                plt.plot(phases[phases < -0.4]+1.0, data['fluxes'][phases < -0.4], 'b.')
+                plt.savefig(fname)
+                plt.close()
 
     def __str__(self):
         return '%010d:%02d' % (self.tic.tess_id, self.signal_id)

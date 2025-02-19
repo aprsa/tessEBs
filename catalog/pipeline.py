@@ -35,93 +35,46 @@ def fits_exists(tess_id):
         return False
 
 
-def download_fits(tess_id, destination=None):
-    data = O.query_criteria(dataproduct_type='timeseries', project='TESS', obs_collection='TESS', target_name=tess_id)
+def download_fits(tess_id, destination=None, **kwargs):
+    """
+    Download fits files for a given TESS ID.
+    
+    Keyword arguments:
+    ------------------
+    obs_collection: str
+        Observation collection, 'TESS' or 'HLSP'. By default all collections are downloaded.
+    provenance_name: str
+        Provenance name. By default all provenance names are downloaded.
+    """
+
+    data = O.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS', **kwargs)
     if len(data) > 0:
-        manifest = O.download_products(O.get_product_list(data), productSubGroupDescription='LC', download_dir=destination)
-    return manifest
+        return O.download_products(O.get_product_list(data), download_dir=destination)
+    return None
 
 
-def read_from_all_fits(tess_id, data_dir=DATADIR, normalize=True, remove_nans=True, filelist=None):
-    if filelist is None:
-        fits_list = glob.glob(f'{data_dir}/**/*{tess_id}*lc.fits', recursive=True)
-    else:
-        fits_list = [x for x in filelist if '%d' % tess_id in x]
-
-    if len(fits_list) == 0:
-        return None, None, None
-
-    times, fluxes, ferrs = [], [], []
-    for filename in fits_list:
-        with fits.open(filename) as hdu:
-            # pylint: disable=E1101
-            time = hdu[1].data['TIME']
-            flux = hdu[1].data['PDCSAP_FLUX']
-            flux_err = hdu[1].data['PDCSAP_FLUX_ERR']
-
-            if remove_nans:
-                cond = np.where(np.logical_and(~np.isnan(time), ~np.isnan(flux), ~np.isnan(flux_err)))
-            else:
-                cond = slice(None)
-
-            time = time[cond]
-            if normalize:
-                flux_err = flux_err[cond]/np.nanmean(flux[cond])
-                flux = flux[cond]/np.nanmean(flux[cond])
-            else:
-                flux_err = flux_err[cond]
-                flux = flux[cond]
-        times.append(time)
-        fluxes.append(flux)
-        ferrs.append(flux_err)
-
-    # Concatenate all arrays:
-    times = np.concatenate(times)
-    fluxes = np.concatenate(fluxes)
-    ferrs = np.concatenate(ferrs)
-
-    # As globbing fits files might be out of order, we need to sort the arrays:
-    s = np.argsort(times)
-
-    return (times[s], fluxes[s], ferrs[s])
+def read_from_path(tess_id, provenance, data_dir=DATADIR, normalize=True, remove_nans=True):
+    times, fluxes, ferrs = provenance.lc(tess_id=tess_id, data_dir=data_dir, normalize=normalize, remove_nans=remove_nans)
+    return times, fluxes, ferrs
 
 
-def read_from_fits(tess_id, normalize=True, remove_nans=True):
-    filename = glob.glob('%s/*%d*fits' % (DATADIR, tess_id))[0]
+def load_data(tess_id, datatype='lc', provenance=None, data_dir='static/catalog/lc_data'):
+    filename = f'{data_dir}/tic{tess_id:010d}.fits'
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f'File {filename} not found.')
 
-    with fits.open(filename) as hdu:
-        # pylint: disable=E1101
-        time = hdu[1].data['TIME']
-        flux = hdu[1].data['PDCSAP_FLUX']
-        flux_err = hdu[1].data['PDCSAP_FLUX_ERR']
+    with fits.open(f'{data_dir}/tic{tess_id:010d}.fits') as hdul:
+        if provenance is None:
+            provenance = hdul[1].header['EXTNAME']
 
-        if remove_nans:
-            cond = np.where(np.logical_and(~np.isnan(time), ~np.isnan(flux), ~np.isnan(flux_err)))
+        if datatype == 'lc':
+            return hdul[provenance].data
+
+        elif datatype == 'spd':
+            return hdul[provenance+'-SPD'].data
+
         else:
-            cond = slice(None)
-
-        time = time[cond]
-        if normalize:
-            flux = flux[cond]/np.nanmean(flux[cond])
-            flux_err = flux_err[cond]/np.nanmean(flux[cond])
-        else:
-            flux = flux[cond]
-            flux_err = flux_err[cond]
-
-    return (time, flux, flux_err)
-
-
-def read_from_ascii(tess_id, content='lc', prefix='catalog/static/catalog'):
-    if content == 'lc':
-        filename = f'{prefix}/lc_data/tic{tess_id:010d}.norm.lc'
-        time, flux, ferr = np.loadtxt(filename, usecols=(0, 1, 2), unpack=True)
-        return time, flux, ferr
-    elif content == 'spd':
-        filename = f'{prefix}/spd_data/tic{tess_id:010d}.ls.spd'
-        freq, power, logfap = np.loadtxt(filename, usecols=(0, 1, 2), unpack=True)
-        return freq, power, logfap
-    else:
-        raise ValueError('Invalid content type.')
+            raise ValueError(f'Data type {datatype} not recognized.')
 
 
 def bjd2phase(times, bjd0, period, pshift=0.0):
@@ -160,14 +113,15 @@ def estimate_period(time, flux, window):
     return period
 
 
-def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
+def run_lombscargle(data, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
     wmin = 2*np.pi/pmax
     wmax = 2*np.pi/pmin
     wstep = 2*np.pi*pstep/pmin/pmax
 
     w = np.arange(wmin, wmax, wstep)
 
-    flux = (flux - np.mean(flux))/np.std(flux)
+    time = data['times']
+    flux = (data['fluxes'] - np.mean(data['fluxes']))/np.std(data['fluxes'])
     power = LS(time, flux, w, normalize=False)
     logfap = np.log10(1.0 - exponweib.cdf(power, a=1.0, c=1.0, loc=0.0, scale=1.0))
 
@@ -183,10 +137,10 @@ def run_lombscargle(time, flux, ferr, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
         peak_periods = []
 
     return {
-        'freq': w,
-        'period': 2*np.pi/w,
-        'power': power,
-        'logfap': logfap,
+        'freqs': w,
+        'periods': 2*np.pi/w,
+        'powers': power,
+        'logfaps': logfap,
         'peak_frequencies': peak_freqs,
         'peak_powers': peak_powers,
         'peak_periods': peak_periods

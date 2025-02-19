@@ -1,6 +1,6 @@
 import numpy as np
 
-from .models import Ephemeris
+from .models import TIC, Ephemeris
 
 from . import pipeline as pl
 
@@ -14,11 +14,20 @@ from bokeh.embed import components
 
 
 def create_ephemeris_ui(tess_id):
-    # Data loading:
-    time, flux, ferr = pl.read_from_ascii(tess_id, content='lc')
+    # get the TIC object:
+    tic = TIC.objects.get(tess_id=tess_id)
+
+    # get available provenances:
+    provenances = [p.name for p in tic.provenances.all()]
+    active_provenance = provenances[0]
+
+    lcs = {}
+    for provenance in provenances:
+        lc = pl.load_data(tess_id, datatype='lc', provenance=provenance)
+        if lc is not None:
+            lcs[provenance] = lc
 
     # TODO: move this to css if possible:
-    # theme = Theme(json={'attrs': {'Title': {'text_color': 'red'}}})
     theme = Theme('catalog/ephemeris_theme.yaml')
 
     stylesheet = InlineStyleSheet(
@@ -47,31 +56,37 @@ def create_ephemeris_ui(tess_id):
         """
     )
 
-    # original, unmodified data:
-    lc_data = ColumnDataSource({
-        'time': time,
-        'phase': pl.bjd2phase(time, 0, 1),
-        'flux': flux,
-        'dflux': np.diff(flux, append=[flux[-1],]),
-    })
+    original_data = {provenance: ColumnDataSource({
+        'time': lcs[provenance]['times'],
+        'phase': pl.bjd2phase(lcs[provenance]['times'], 0, 1),
+        'flux': lcs[provenance]['fluxes'],
+        'dflux': np.diff(lcs[provenance]['fluxes'], append=[lcs[provenance]['fluxes'][-1],]),
+    }) for provenance in provenances}
 
     # data that will be displayed:
     displayed_data = ColumnDataSource({
-        'time': time,
-        'phase': pl.bjd2phase(time, 0, 1),
-        'flux': flux,
-        'dflux': np.diff(flux, append=[flux[-1],]),
+        'time': lcs[active_provenance]['times'],
+        'phase': pl.bjd2phase(lcs[active_provenance]['times'], 0, 1),
+        'flux': lcs[active_provenance]['fluxes'],
+        'dflux': np.diff(lcs[active_provenance]['fluxes'], append=[lcs[active_provenance]['fluxes'][-1],]),
     })
 
     # periodogram data:
-    freq, power, lsfap = pl.read_from_ascii(tess_id, content='spd')
+    spd = pl.load_data(tess_id, datatype='spd')
+    if spd is None:
+        pmin = 1/24  # 1 hour
+        pmax = 27.0  # TESS sector length
+        pstep = 0.0007  # 1 minute
+
+        spd = pl.run_lombscargle(lc['times'], lc['fluxes'], lc['ferrs'], pmin, pmax, pstep)
+
     spd_data = ColumnDataSource({
-        'period': 2*np.pi/freq,
-        'power': power,
+        'period': spd['periods'],
+        'power': spd['powers'],
     })
 
     # figure definitions:
-    lc = figure(
+    lcf = figure(
         tools='pan,box_zoom,wheel_zoom,save,reset',  # also available: help, hover, box_select, lasso_select, poly_select, tap, crosshair
         active_drag='box_zoom',
         title=f'TIC {tess_id} timeseries',
@@ -80,9 +95,9 @@ def create_ephemeris_ui(tess_id):
         sizing_mode='stretch_width',
         height=300,
     )
-    lc.toolbar.logo = None
+    lcf.toolbar.logo = None
 
-    spd = figure(
+    spdf = figure(
         tools='crosshair,pan,box_zoom,reset',
         active_drag='box_zoom',
         title=f'TIC {tess_id} periodogram',
@@ -91,9 +106,9 @@ def create_ephemeris_ui(tess_id):
         sizing_mode='stretch_width',
         height=300,
     )
-    spd.toolbar.logo = None
+    spdf.toolbar.logo = None
 
-    ph = figure(
+    phf = figure(
         tools='pan,box_zoom,wheel_zoom,save,reset',
         active_drag='box_zoom',
         title=f'TIC {tess_id} phase plot',
@@ -104,7 +119,7 @@ def create_ephemeris_ui(tess_id):
         width=45,
         height=300,
     )
-    ph.toolbar.logo = None
+    phf.toolbar.logo = None
 
     # Callback definitions:
     def switch_yaxis(args):
@@ -162,7 +177,7 @@ def create_ephemeris_ui(tess_id):
             args=args,
             code="""
                 const thinning = cb_obj.value;
-                const full = full_data.data;
+                const full = full_data[provenance].data;
                 const display = displayed_data.data;
 
                 Object.keys(display).forEach(key => {
@@ -181,20 +196,26 @@ def create_ephemeris_ui(tess_id):
         return callback
 
     # widget definitions:
+    provenance_widget = Select(
+        title='Provenance:',
+        value=active_provenance,
+        options=provenances,
+    )
+
     t0_widget = Spinner(
         title='t0 [days]:',
         low=0,
         high=1e10,
-        step=time[1]-time[0],
+        step=lc['times'][1]-lc['times'][0],
         value=0.0,
         format='0.00000000',
     )
 
     period_widget = Spinner(
         title='Period [days]:',
-        low=time[1]-time[0],
-        high=(time[-1]-time[0])/2,
-        step=time[1]-time[0],
+        low=lc['times'][1]-lc['times'][0],
+        high=(lc['times'][-1]-lc['times'][0])/2,
+        step=lc['times'][1]-lc['times'][0],
         value=1.0,
         format='1.00000000',
     )
@@ -205,6 +226,7 @@ def create_ephemeris_ui(tess_id):
         width=120,
         height=35,
     )
+
     half_period_button.js_on_click(CustomJS(
         args=dict(period=period_widget),
         code="""
@@ -218,6 +240,7 @@ def create_ephemeris_ui(tess_id):
         width=120,
         height=35,
     )
+
     double_period_button.js_on_click(CustomJS(
         args=dict(period=period_widget),
         code="""
@@ -247,7 +270,7 @@ def create_ephemeris_ui(tess_id):
         value=1,
         format='1',
     )
-    thinning_widget.js_on_change('value', thin_data(args={'full_data': lc_data, 'displayed_data': displayed_data}))
+    thinning_widget.js_on_change('value', thin_data(args={'full_data': original_data, 'displayed_data': displayed_data, 'provenance': active_provenance}))
 
     ephem_rows = []
     for ephem in Ephemeris.objects.filter(tic__tess_id=tess_id):
@@ -312,7 +335,7 @@ def create_ephemeris_ui(tess_id):
 
     run_ls_widget.js_on_click(
         CustomJS(
-            args=dict(source=displayed_data, spd=spd_data, fig=lc, pmin=pmin_widget, pmax=pmax_widget, pstep=pstep_widget, quantity=yaxis_widget),
+            args=dict(source=displayed_data, spd=spd_data, fig=lcf, pmin=pmin_widget, pmax=pmax_widget, pstep=pstep_widget, quantity=yaxis_widget),
             code="""
             // disable the button while the calculation is running:
             cb_obj.disabled = true;
@@ -352,7 +375,7 @@ def create_ephemeris_ui(tess_id):
             })
             .then(response => {
                 if (!response.ok) {
-                    console.log(response)
+                    console.log(response);
                     throw new Error('Failed to parse API response.');
                 }
                 return response.json();
@@ -494,7 +517,7 @@ def create_ephemeris_ui(tess_id):
         """
     ))
 
-    spd.js_on_event(events.Tap, CustomJS(
+    spdf.js_on_event(events.Tap, CustomJS(
         args=dict(period=period_widget),
         code="""
             period.value = cb_obj.x;
@@ -503,6 +526,7 @@ def create_ephemeris_ui(tess_id):
 
     controls = column(
         children=[
+            provenance_widget,
             yaxis_widget,
             thinning_widget,
             t0_widget,
@@ -519,19 +543,47 @@ def create_ephemeris_ui(tess_id):
     )
 
     # Plot data:
-    lc_plot = lc.circle('time', 'flux', size=2, color='blue', nonselection_alpha=0.1, source=displayed_data)
-    sp_plot = spd.line('period', 'power', color='blue', source=spd_data)
-    ph_plot = ph.circle('phase', 'flux', size=2, color='blue', nonselection_alpha=0.1, source=displayed_data)
+    lc_plot = lcf.circle('time', 'flux', size=2, color='blue', nonselection_alpha=0.1, source=displayed_data)
+    sp_plot = spdf.line('period', 'power', color='blue', source=spd_data)
+    ph_plot = phf.circle('phase', 'flux', size=2, color='blue', nonselection_alpha=0.1, source=displayed_data)
 
     # Attach callbacks:
+    provenance_widget.js_on_change(
+        'value',
+        CustomJS(
+            args=dict(
+                original=original_data,
+                displayed=displayed_data,
+            ),
+            code="""
+                const new_provenance = cb_obj.value;
+                const data = original[new_provenance].data;
+                const used = displayed.data;
+                console.log('Switching to provenance:', new_provenance);
+
+                Object.keys(used).forEach(key => {
+                    used[key] = [];
+                });
+
+                for (let i = 0; i < data.time.length; i++) {
+                    Object.keys(used).forEach(key => {
+                        used[key].push(data[key][i]);
+                    });
+                }
+
+                displayed.change.emit();
+            """
+        )
+    )
+
     yaxis_widget.js_on_change('value', switch_yaxis(args={'plots': [lc_plot, ph_plot], 'source': displayed_data}))
     t0_widget.js_on_change(
         'value',
-        rephase(args={'plot': ph_plot, 'sources': [lc_data, displayed_data], 't0_widget': t0_widget, 'period_widget': period_widget})
+        rephase(args={'plot': ph_plot, 'sources': [original_data[active_provenance], displayed_data], 't0_widget': t0_widget, 'period_widget': period_widget})
     )
     period_widget.js_on_change(
         'value',
-        rephase(args={'plot': ph_plot, 'sources': [lc_data, displayed_data], 't0_widget': t0_widget, 'period_widget': period_widget})
+        rephase(args={'plot': ph_plot, 'sources': [original_data[active_provenance], displayed_data], 't0_widget': t0_widget, 'period_widget': period_widget})
     )
 
     # UI layout:
@@ -543,7 +595,7 @@ def create_ephemeris_ui(tess_id):
                 width=300
             ),
             column(
-                children=[lc, spd, ph],
+                children=[lcf, spdf, phf],
                 sizing_mode='stretch_width',
             ),
             # column(

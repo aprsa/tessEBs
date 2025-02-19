@@ -5,6 +5,7 @@ tessEBs/private.py
 tessEBs/local
 
 # Static files
+mastDownload/
 static/catalog/
 catalog/static/catalog/
 

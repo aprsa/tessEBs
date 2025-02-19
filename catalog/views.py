@@ -62,7 +62,11 @@ class DetailsView(TemplateView):
         tess_id = context.get('tess_id', None)
         signal_id = context.get('signal_id', 1)
         context['signal_id'] = signal_id
-        context['tic'] = TIC.objects.filter(tess_id=tess_id)[0]
+        tic_list = TIC.objects.filter(tess_id=tess_id)
+        if tic_list.count() == 0:
+            context['tic'] = None
+        else:
+            context['tic'] = tic_list[0]
         context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
         return context
 
@@ -221,6 +225,21 @@ class SearchResultsView(ListView):
         return self.object_list
 
 
+class AddTICView(TemplateView):
+    template_name = 'catalog/add_tic.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tess_id = context.get('tess_id', None)
+        
+        tic_list = TIC.objects.filter(tess_id=tess_id)
+        context['already_in_cat'] = True if tic_list.count() > 0 else False
+        # if context['already_in_cat']:
+        #     pre-fill the fields?
+
+        return context
+
+
 class EphemView(TemplateView):
     template_name = 'catalog/ephem.html'
 
@@ -232,13 +251,63 @@ class EphemView(TemplateView):
         script, div = create_ephemeris_ui(tess_id)
 
         context['signal_id'] = signal_id
-        context['tic'] = TIC.objects.filter(tess_id=tess_id)[0]
+        tic_list = TIC.objects.filter(tess_id=tess_id)
+        if tic_list.count() == 0:
+            context['tic'] = None
+        else:
+            context['tic'] = tic_list[0]
         context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
 
         context['bokeh_script'] = script
         context['bokeh_div'] = div
 
         return context
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApiQueryView(View):
+    def get(self, request, tess_id):
+        try:
+            # data = json.loads(request.body.decode('utf-8'))
+            # tess_id = data.get('tess_id')
+
+            tic = TIC(tess_id=tess_id)
+            meta = tic.query_mast()
+
+            return JsonResponse({
+                'status': 'success',
+                **meta
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'failure',
+                'error': str(e)
+            }, status=400)
+
+
+# @method_decorator(csrf_exempt, name='dispatch')
+class ApiTicAddView(View):
+    def post(self, request):
+        try:
+            data = request.POST
+
+            tess_id = int(data.get('tess_id'))
+            tic = TIC.from_mast(tess_id, create_static=False)
+            tic.save()
+
+            return redirect(request.META.get('HTTP_REFERER'))
+            # comment out above and uncomment below to debug
+            # return JsonResponse({
+            #     'status': 'success',
+            #     'data': data,
+            #     'tess_id': tess_id
+            # })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'failure',
+                'data': data,
+                'error': str(e),
+            }, status=400)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -290,6 +359,28 @@ class ApiLombScargleView(View):
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApiStaticCreateView(View):
+    def get(self, request, tess_id):
+        try:
+            tic = TIC(tess_id=tess_id)
+            manifest = tic.download_data('static/catalog')
+            if manifest is None:
+                return JsonResponse({
+                    'status': 'failure',
+                    'error': f'no data found for TIC {tess_id}'
+                }, status=400)
+            tic.create_static_files(data_dir='static/catalog/mastDownload')
+            return JsonResponse({
+                'status': 'success'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'failure',
+                'error': str(e)
+            }, status=400)
 
 
 def profile(request):
