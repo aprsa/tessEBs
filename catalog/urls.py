@@ -4,6 +4,7 @@ from django.views.generic import TemplateView, DetailView
 from . import views
 
 urlpatterns = [
+    # website views:
     path('', views.MainView.as_view(), name='main'),
     path('<int:tess_id>.<int:signal_id>', views.DetailsView.as_view(), name='details'),
     path('<int:tess_id>', views.DetailsView.as_view(), name='details'),
@@ -19,6 +20,11 @@ urlpatterns = [
     path('triage/<int:tess_id>', views.react_triage),
     path('triage_done', TemplateView.as_view(template_name='static/triage_done.html'), name='triage_done'),
 
+    # api testing frontend:
+    path('test_api', views.TestApiView.as_view(), name='test_frontend'),
+
+    # api views:
+    path('api/test', views.ApiTestView.as_view(), name='test'),
     path('api/query/<int:tess_id>', views.ApiQueryView.as_view(), name='query_mast'),
     path('api/tic/add', views.ApiTicAddView.as_view(), name='add_or_update_tic'),
     path('api/ephem/add', views.ApiEphemAddView.as_view(), name='add_ephemeris'),

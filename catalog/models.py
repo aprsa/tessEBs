@@ -265,13 +265,16 @@ class TIC(models.Model):
 
         fits.HDUList(hdus).writeto(f'{data_dir}/tic{self.tess_id:010d}.fits', overwrite=True)
 
-    def attach_spds_to_data(self, data_dir='static/catalog/lc_data'):
+    def attach_spds_to_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
         # the method assumes that provenances are up to date.
         if self.provenances.count() == 0:
             raise ValueError(f'no provenances found for TIC {self.tess_id}')
 
         with fits.open(f'{data_dir}/tic{self.tess_id:010d}.fits', mode='update') as hdul:
             for provenance in [p.name for p in self.provenances.all()]:
+                if provenance+'-SPD' in hdul and not force_overwrite:
+                    continue
+
                 spd = run_lombscargle(hdul[provenance].data)
                 spd = np.vstack((spd['periods'], spd['powers'])).T
 

@@ -9,6 +9,7 @@ import numpy as np
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, FileResponse
 from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
@@ -262,6 +263,23 @@ class EphemView(TemplateView):
         context['bokeh_div'] = div
 
         return context
+
+
+class TestApiView(TemplateView):
+    template_name = 'catalog/test_api.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiTestView(View):
+    def post(self, request):
+        data = request.POST
+        return JsonResponse({
+            'status': 'success',
+        })
 
 
 @method_decorator(csrf_exempt, name='dispatch')
