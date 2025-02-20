@@ -1,6 +1,7 @@
 from django.db import models
 from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
 from astroquery.simbad import Simbad as sbd
+from . import backend
 from .pipeline import download_fits, load_data, run_lombscargle, run_bls, bjd2phase
 from .provenances import get_provenance
 
@@ -128,47 +129,23 @@ class TIC(models.Model):
             An instance of the TIC class with the data from MAST.
         """
 
+        meta = backend.download_meta(tess_id)
+        sectors = meta.pop('sectors')
+        provenances = meta.pop('provenances')
+
         # if the TIC is already in the database, use it; otherwise instantiate a new one:
-        tic, created = cls.objects.get_or_create(tess_id=tess_id)
-        mast_entry = cat.query_criteria(catalog='TIC', ID=tess_id)
-
-        def get(entry, key):
-            return entry[key][0] if ~np.isnan(entry[key][0]) else None
-
-        tic.ra = get(mast_entry, 'ra')
-        tic.dec = get(mast_entry, 'dec')
-        tic.glon = get(mast_entry, 'gallong')
-        tic.glat = get(mast_entry, 'gallat')
-        tic.Tmag = get(mast_entry, 'Tmag')
-        tic.teff = get(mast_entry, 'Teff')
-        tic.logg = get(mast_entry, 'logg')
-        tic.abun = get(mast_entry, 'MH')
-        tic.pmra = get(mast_entry, 'pmRA')
-        tic.pmdec = get(mast_entry, 'pmDEC')
-
-        tic.gaia_id = int(mast_entry['GAIA'][0]) if mast_entry['GAIA'].tolist()[0] is not None else None
-
-        # query simbad for other designations:
-        other_ids = sbd.query_objectids(f'TIC {tess_id}')
-        if other_ids:
-            for other_id in other_ids['ID']:
-                if 'ASAS' in other_id:
-                    tic.asas_id = other_id.split(' ')[1]
-                if 'KIC' in other_id:
-                    tic.kepler_id = other_id.split(' ')[1]
-                if 'DR3' in other_id:
-                    tic.gaia_dr3_id = other_id.split(' ')[2]
+        tic, created = cls.objects.get_or_create(tess_id=tess_id, defaults=meta)
 
         # if new TIC, save it to assign an ID:
         if created:
             tic.save()
 
         # add sectors:
-        for sector_id in tc.get_sectors(objectname=f'TIC {tess_id}')['sector']:
-            tic.sectors.add(Sector.objects.filter(sector_id=sector_id)[0])
+        for sector_id in sectors:
+            tic.sectors.add(Sector.objects.get(sector_id=sector_id))
 
         # add provenances:
-        for pname in set(obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name']):
+        for pname in provenances:
             prov, _ = Provenance.objects.get_or_create(name=pname)
             tic.provenances.add(prov)
 
@@ -188,48 +165,6 @@ class TIC(models.Model):
 
         return tic
 
-    def query_mast(self):
-        meta = dict()
-
-        def query(entry, key):
-            return entry[key][0] if ~np.isnan(entry[key][0]) else None
-
-        mast_entry = cat.query_criteria(catalog='TIC', ID=self.tess_id)
-        if len(mast_entry) == 0:
-            meta['status'] = f'no data found for TIC {self.tess_id}'
-            return meta
-
-        meta['status'] = 'success'
-        meta['ra'] = query(mast_entry, 'ra')
-        meta['dec'] = query(mast_entry, 'dec')
-        meta['glon'] = query(mast_entry, 'gallong')
-        meta['glat'] = query(mast_entry, 'gallat')
-        meta['Tmag'] = query(mast_entry, 'Tmag')
-        meta['teff'] = query(mast_entry, 'Teff')
-        meta['logg'] = query(mast_entry, 'logg')
-        meta['abun'] = query(mast_entry, 'MH')
-        meta['pmra'] = query(mast_entry, 'pmRA')
-        meta['pmdec'] = query(mast_entry, 'pmDEC')
-        meta['gaia_id'] = int(mast_entry['GAIA'][0]) if mast_entry['GAIA'].tolist()[0] is not None else None
-        
-        other_ids = sbd.query_objectids(f'TIC {self.tess_id}')
-        if other_ids:
-            for other_id in other_ids['ID']:
-                if 'ASAS' in other_id:
-                    meta['asas_id'] = other_id.split(' ')[1]
-                if 'KIC' in other_id:
-                    meta['kepler_id'] = other_id.split(' ')[1]
-                if 'DR3' in other_id:
-                    meta['gaia_dr3_id'] = other_id.split(' ')[2]
-
-        sectors = tc.get_sectors(objectname=f'TIC {self.tess_id}')
-        meta['sectors'] = [int(sector_id) for sector_id in sectors['sector']]
-
-        provenances = set(obs.query_criteria(target_name=self.tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name'])
-        meta['provenances'] = [str(provenance) for provenance in provenances]
-
-        return meta
-
     def update_provenances(self):
         """
         Update available provenances from MAST.
@@ -246,7 +181,11 @@ class TIC(models.Model):
         # typical kwargs are obs_collection and provenance_name.
         return download_fits(tess_id=self.tess_id, destination=destination, **kwargs)
 
-    def syndicate_data(self, data_dir='static/catalog/lc_data'):
+    def syndicate_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
+        fname = f'{data_dir}/tic{self.tess_id:010d}.fits'
+        if os.path.exists(fname) and not force_overwrite:
+            return fname
+
         # the method assumes that provenances are up to date.
         if self.provenances.count() == 0:
             raise ValueError(f'no provenances found for TIC {self.tess_id:010d}')
@@ -263,7 +202,9 @@ class TIC(models.Model):
             lc = np.array(data, dtype=np.float64).T
             hdus.append(fits.table_to_hdu(Table(lc, names=('times', 'fluxes', 'ferrs'), meta={'extname': provenance.name})))
 
-        fits.HDUList(hdus).writeto(f'{data_dir}/tic{self.tess_id:010d}.fits', overwrite=True)
+        fits.HDUList(hdus).writeto(fname, overwrite=True)
+
+        return fname
 
     def attach_spds_to_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
         # the method assumes that provenances are up to date.

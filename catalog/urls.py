@@ -25,7 +25,8 @@ urlpatterns = [
 
     # api views:
     path('api/test', views.ApiTestView.as_view(), name='test'),
-    path('api/query/<int:tess_id>', views.ApiQueryView.as_view(), name='query_mast'),
+    path('api/tic/download_meta', views.ApiTicDownloadMetaView.as_view(), name='fetch_from_online_databases'),
+    path('api/tic/syndicate_data', views.ApiSyndicateDataView.as_view(), name='syndicate_data'),
     path('api/tic/add', views.ApiTicAddView.as_view(), name='add_or_update_tic'),
     path('api/ephem/add', views.ApiEphemAddView.as_view(), name='add_ephemeris'),
     path('api/lombscargle', views.ApiLombScargleView.as_view(), name='lombscargle'),

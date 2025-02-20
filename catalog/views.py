@@ -19,6 +19,7 @@ from csv_export.views import CSVExportView
 from django.views.generic import View, TemplateView, ListView
 from django.views.generic.detail import BaseDetailView
 
+from . import backend
 from . import pipeline as pl
 from .ephemeris_ui import create_ephemeris_ui
 from .models import EB, TIC, Ephemeris, EphemerisSource, Comment
@@ -275,32 +276,85 @@ class TestApiView(TemplateView):
 
 @method_decorator(login_required, name='dispatch')
 class ApiTestView(View):
+    """
+    Tests the API.
+
+    Returns:
+    --------
+    JsonResponse
+    """
+
     def post(self, request):
-        data = request.POST
         return JsonResponse({
             'status': 'success',
         })
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class ApiQueryView(View):
-    def get(self, request, tess_id):
-        try:
-            # data = json.loads(request.body.decode('utf-8'))
-            # tess_id = data.get('tess_id')
+@method_decorator(login_required, name='dispatch')
+class ApiTicDownloadMetaView(View):
+    """
+    Downloads metadata for a given TIC ID from MAST and SIMBAD.
+    """
 
-            tic = TIC(tess_id=tess_id)
-            meta = tic.query_mast()
+    def post(self, request):
+        data = request.POST
 
-            return JsonResponse({
-                'status': 'success',
-                **meta
-            })
-        except Exception as e:
+        tess_id = data.get('tess_id', None)
+        if tess_id is None:
             return JsonResponse({
                 'status': 'failure',
-                'error': str(e)
+                'error': 'tess_id not provided'
             }, status=400)
+
+        meta = backend.download_meta(tess_id)
+
+        return JsonResponse({
+            'status': 'success',
+            **meta
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiSyndicateDataView(View):
+    """
+    Syndicate data for a given TIC ID.
+
+    POST parameters:
+    ----------------
+    tess_id: int
+        TIC ID to syndicate data for.
+    force_overwrite: bool
+        If True, overwrite existing data.
+
+    Returns:
+    --------
+    JsonResponse
+    """
+
+    def post(self, request):
+        data = request.POST
+
+        tess_id = data.get('tess_id', None)
+        if tess_id is None:
+            return JsonResponse({
+                'status': 'failure',
+                'error': 'tess_id not provided'
+            }, status=400)
+
+        try:
+            tic = TIC.objects.get(tess_id=tess_id)
+        except TIC.DoesNotExist:
+            return JsonResponse({
+                'status': 'failure',
+                'error': f'tess_id {tess_id} not found'
+            }, status=400)
+
+        force_overwrite = data.get('force_overwrite', False)
+        tic.syndicate_data(force_overwrite=force_overwrite)
+
+        return JsonResponse({
+            'status': 'success',
+        })
 
 
 # @method_decorator(csrf_exempt, name='dispatch')
