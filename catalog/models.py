@@ -1,6 +1,5 @@
 from django.db import models
-from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
-from astroquery.simbad import Simbad as sbd
+from astroquery.mast import Observations as obs
 from . import backend
 from .pipeline import download_fits, load_data, run_lombscargle, run_bls, bjd2phase
 from .provenances import get_provenance
@@ -425,31 +424,33 @@ class TIC(models.Model):
                 plt.close()
 
     def prep_for_triage(self, static_dir='static/catalog', filelist=None, ephemerides=None):
-        lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
-        if os.path.exists(lcfn):
-            times, fluxes = np.loadtxt(lcfn, usecols=(0, 1), unpack=True)
-        else:
-            times, fluxes, _ = read_from_all_fits(self.tess_id, filelist=filelist)
+        # under review.
+        return
+        # lcfn = f'{static_dir}/lc_data/tic{self.tess_id:010d}.norm.lc'
+        # if os.path.exists(lcfn):
+        #     times, fluxes = np.loadtxt(lcfn, usecols=(0, 1), unpack=True)
+        # else:
+        #     times, fluxes, _ = read_from_all_fits(self.tess_id, filelist=filelist)
 
-        if times is None or fluxes is None:
-            raise ValueError(f'cannot find any local data associated with TIC {self.tess_id:010d}.')
+        # if times is None or fluxes is None:
+        #     raise ValueError(f'cannot find any local data associated with TIC {self.tess_id:010d}.')
 
-        if ephemerides is None:
-            ephemerides = self.ephemerides.all()
+        # if ephemerides is None:
+        #     ephemerides = self.ephemerides.all()
 
-        for eph in ephemerides:
-            for period_str, period_mult, in zip(['half', 'period', 'double'], [0.5, 1.0, 2.0]):
-                phases = bjd2phase(times=times, bjd0=eph.bjd0 if eph.bjd0 is not None else 0.0, period=eph.period*period_mult)
+        # for eph in ephemerides:
+        #     for period_str, period_mult, in zip(['half', 'period', 'double'], [0.5, 1.0, 2.0]):
+        #         phases = bjd2phase(times=times, bjd0=eph.bjd0 if eph.bjd0 is not None else 0.0, period=eph.period*period_mult)
 
-                plt.figure()
-                plt.xlabel('Phase')
-                plt.ylabel('Normalized PDC flux')
-                plt.title(f'TIC {self.tess_id:010d}, period {eph.period*period_mult:0.8f} days')
-                plt.plot(phases, fluxes, 'b.')
-                plt.plot(phases[phases > +0.4]-1.0, fluxes[phases > +0.4], 'c.')
-                plt.plot(phases[phases < -0.4]+1.0, fluxes[phases < -0.4], 'c.')
-                plt.savefig(f'{static_dir}/triage/tic{self.tess_id:010d}.{eph.pk}.{period_str}.phase.png')
-                plt.close()
+        #         plt.figure()
+        #         plt.xlabel('Phase')
+        #         plt.ylabel('Normalized PDC flux')
+        #         plt.title(f'TIC {self.tess_id:010d}, period {eph.period*period_mult:0.8f} days')
+        #         plt.plot(phases, fluxes, 'b.')
+        #         plt.plot(phases[phases > +0.4]-1.0, fluxes[phases > +0.4], 'c.')
+        #         plt.plot(phases[phases < -0.4]+1.0, fluxes[phases < -0.4], 'c.')
+        #         plt.savefig(f'{static_dir}/triage/tic{self.tess_id:010d}.{eph.pk}.{period_str}.phase.png')
+        #         plt.close()
 
     def __str__(self):
         return '%10d' % self.tess_id
@@ -726,9 +727,9 @@ class EB(models.Model):
 class EphemerisSource(models.Model):
     """
     Ephemeris source model.
-    
+
     The model is used to store information about the source of the ephemerides.
-    
+
     Attributes
     ----------
     model : str

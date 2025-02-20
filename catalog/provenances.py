@@ -42,7 +42,11 @@ class Provenance:
 
         for fits_file in fits_list:
             with fits.open(fits_file) as hdul:
-                data = hdul[self.fits_extension].data
+                try:
+                    data = hdul[self.fits_extension].data
+                except Exception as e:
+                    print(f'Error reading {fits_file}: {e}')
+                    continue
                 times = data[self.cols['time']]
 
                 # some provenances have multiple flux/ferr keywords based on the version.

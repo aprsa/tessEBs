@@ -2,7 +2,6 @@ import glob
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
-import subprocess
 import tempfile
 import os
 
@@ -38,7 +37,7 @@ def fits_exists(tess_id):
 def download_fits(tess_id, destination=None, **kwargs):
     """
     Download fits files for a given TESS ID.
-    
+
     Keyword arguments:
     ------------------
     obs_collection: str
