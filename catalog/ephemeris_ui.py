@@ -19,13 +19,15 @@ def create_ephemeris_ui(tess_id):
 
     # get available provenances:
     provenances = [p.name for p in tic.provenances.all()]
-    active_provenance = provenances[0]
 
     lcs = {}
     for provenance in provenances:
         lc = pl.load_data(tess_id, datatype='lc', provenance=provenance)
         if lc is not None:
             lcs[provenance] = lc
+
+    active_provenance = 'TESS-SPOC' if 'TESS-SPOC' in provenances else provenances[0]
+    lc = lcs[active_provenance]
 
     # TODO: move this to css if possible:
     theme = Theme('catalog/ephemeris_theme.yaml')
@@ -65,10 +67,10 @@ def create_ephemeris_ui(tess_id):
 
     # data that will be displayed:
     displayed_data = ColumnDataSource({
-        'time': lcs[active_provenance]['times'],
-        'phase': pl.bjd2phase(lcs[active_provenance]['times'], 0, 1),
-        'flux': lcs[active_provenance]['fluxes'],
-        'dflux': np.diff(lcs[active_provenance]['fluxes'], append=[lcs[active_provenance]['fluxes'][-1],]),
+        'time': lc['times'],
+        'phase': pl.bjd2phase(lc['times'], 0, 1),
+        'flux': lc['fluxes'],
+        'dflux': np.diff(lc['fluxes'], append=[lc['fluxes'][-1],]),
     })
 
     # periodogram data:
@@ -335,15 +337,15 @@ def create_ephemeris_ui(tess_id):
 
     run_ls_widget.js_on_click(
         CustomJS(
-            args=dict(source=displayed_data, spd=spd_data, fig=lcf, pmin=pmin_widget, pmax=pmax_widget, pstep=pstep_widget, quantity=yaxis_widget),
+            args=dict(source=displayed_data, spd=spd_data, fig=lcf, pmin=pmin_widget, pmax=pmax_widget, pstep=pstep_widget, yaxis_widget=yaxis_widget),
             code="""
             // disable the button while the calculation is running:
             cb_obj.disabled = true;
 
             // allow switching between fluxes and flux differences:
-            const qty = quantity.value === 'flux' ? 'flux' : 'dflux';
+            const yaxis = yaxis_widget.value === 'flux' ? 'flux' : 'dflux';
 
-            // figure out which data to use:
+            // figure out data span to be used for LS:
             const xmin = fig.x_range.start;
             const xmax = fig.x_range.end;
             const x = source.data.time;
@@ -354,15 +356,17 @@ def create_ephemeris_ui(tess_id):
                 }
             }
             const filtered_time = Array.from(indices.map(i => source.data['time'][i]));
-            const filtered_flux = Array.from(indices.map(i => source.data[qty][i]));
+            const filtered_flux = Array.from(indices.map(i => source.data[yaxis][i]));
             console.log('length of the filtered data:', filtered_time.length);
 
             fetch('/api/lombscargle', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': document.getElementsByName('csrfmiddlewaretoken')[0].value,
                     'Accept': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     'time': filtered_time,
                     'flux': filtered_flux,
@@ -370,7 +374,6 @@ def create_ephemeris_ui(tess_id):
                     'pmax': pmax.value,
                     'pstep': pstep.value,
                     'npeaks': 0,
-                    'test': 'hello from js!'
                 }),
             })
             .then(response => {

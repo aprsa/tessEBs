@@ -357,6 +357,58 @@ class ApiSyndicateDataView(View):
         })
 
 
+@method_decorator(login_required, name='dispatch')
+class ApiLombScargleView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+
+            time = np.array(data.get('time'))
+            flux = np.array(data.get('flux'))
+            pmin = data.get('pmin', 0.1)
+            pmax = data.get('pmax', 10.0)
+            pstep = data.get('pstep', 0.001)
+            npeaks = data.get('npeaks', 0)
+
+            data = {
+                'times': time,
+                'fluxes': flux
+            }
+            # np.savetxt('data.txt', data)
+            pgram = pl.run_lombscargle(data, pmin, pmax, pstep, npeaks)
+
+            return JsonResponse({
+                'period': pgram['periods'].tolist(),
+                'power': pgram['powers'].tolist()
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+# @method_decorator(login_required, name='dispatch')
+# class ApiLombScargleView(View):
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+
+#             time = np.array(data.get('time'))
+#             flux = np.array(data.get('flux'))
+#             ferr = None
+#             pmin = data.get('pmin', 0.1)
+#             pmax = data.get('pmax', 10.0)
+#             pstep = data.get('pstep', 0.001)
+#             npeaks = data.get('npeaks', 0)
+
+#             pgram = pl.run_lombscargle(time, flux, ferr, pmin, pmax, pstep, npeaks)
+
+#             return JsonResponse({
+#                 'period': pgram['period'].tolist(),
+#                 'power': pgram['power'].tolist()
+#             })
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=400)
+
+
 # @method_decorator(csrf_exempt, name='dispatch')
 class ApiTicAddView(View):
     def post(self, request):
@@ -409,50 +461,9 @@ class ApiEphemAddView(View):
             }, status=400)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class ApiLombScargleView(View):
-    def post(self, request):
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-
-            time = np.array(data.get('time'))
-            flux = np.array(data.get('flux'))
-            ferr = None
-            pmin = data.get('pmin', 0.1)
-            pmax = data.get('pmax', 10.0)
-            pstep = data.get('pstep', 0.001)
-            npeaks = data.get('npeaks', 0)
-
-            pgram = pl.run_lombscargle(time, flux, ferr, pmin, pmax, pstep, npeaks)
-
-            return JsonResponse({
-                'period': pgram['period'].tolist(),
-                'power': pgram['power'].tolist()
-            })
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class ApiStaticCreateView(View):
-    def get(self, request, tess_id):
-        try:
-            tic = TIC(tess_id=tess_id)
-            manifest = tic.download_data('static/catalog')
-            if manifest is None:
-                return JsonResponse({
-                    'status': 'failure',
-                    'error': f'no data found for TIC {tess_id}'
-                }, status=400)
-            tic.create_static_files(data_dir='static/catalog/mastDownload')
-            return JsonResponse({
-                'status': 'success'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'status': 'failure',
-                'error': str(e)
-            }, status=400)
+
 
 
 def profile(request):

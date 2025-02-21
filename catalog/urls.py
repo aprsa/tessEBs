@@ -30,7 +30,6 @@ urlpatterns = [
     path('api/tic/add', views.ApiTicAddView.as_view(), name='add_or_update_tic'),
     path('api/ephem/add', views.ApiEphemAddView.as_view(), name='add_ephemeris'),
     path('api/lombscargle', views.ApiLombScargleView.as_view(), name='lombscargle'),
-    path('api/static/create/<int:tess_id>', views.ApiStaticCreateView.as_view(), name='create_static_files'),
 
     path('api/triage/next', views.api_triage_next),
     path('api/triage/ephem/<int:tess_id>/<str:username>', views.api_triage_ephem),
