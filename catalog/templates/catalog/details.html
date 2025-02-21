@@ -33,6 +33,7 @@
             <th><div class="tooltip">PM(&delta;) [mas]<span class="tooltiptext">Proper motion in Dec.</span></div></th>
             <th><div class="tooltip">Sectors<span class="tooltiptext">TESS sectors the target was observed in</span></div></th>
             <th><div class="tooltip">Provenances<span class="tooltiptext">Available mission and HLSP provenances</span></div></th>
+            <th><div class="tooltip">Syndicated data<span class="tooltiptext">All provenances in a single fits file</span></div></th>
             {% if user.is_authenticated %}
                 <th><div class="tooltip">Admin<span class="tooltiptext">Links to the administrative tasks</span></div></th>
             {% endif %}
@@ -49,8 +50,8 @@
                 <td> {{ tic.pmra }} </td>
                 <td> {{ tic.pmdec }} </td>
                 <td> {{ tic.sectors.all|join:", " }} </td>
-                <!-- <td> <a href="static/catalog/lc_data/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.norm.lc">LC</a> </td> -->
                 <td> {{ tic.provenances.all|join:", " }} </td>
+                <td> <a href="static/catalog/lc_data/tic{{tess_id|stringformat:'010d'}}.fits">FITS</a> </td>
                 {% if user.is_authenticated %}
                     <td style="white-space: nowrap;">
                         <form method="post" action="{% url 'add_or_update_tic' %}" style="display: inline-block;">
