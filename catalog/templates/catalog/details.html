@@ -50,18 +50,28 @@
                 <td> {{ tic.pmra }} </td>
                 <td> {{ tic.pmdec }} </td>
                 <td> {{ tic.sectors.all|join:", " }} </td>
-                <td> {{ tic.provenances.all|join:", " }} </td>
-                <td> <a href="static/catalog/lc_data/tic{{tess_id|stringformat:'010d'}}.fits">FITS</a> </td>
+                <td>
+                    {% for provenance in tic.provenances.all %}
+                        <a href="{{tess_id|stringformat:'010d'}}.{{provenance.name}}">{{ provenance.name }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if data_exist %}
+                        <a href="static/catalog/lc_data/tic{{tess_id|stringformat:'010d'}}.fits">FITS</a>
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
                 {% if user.is_authenticated %}
                     <td style="white-space: nowrap;">
-                        <form method="post" action="{% url 'add_or_update_tic' %}" style="display: inline-block;">
-                            {% csrf_token %}
-                            <div class="tooltip">
-                                <button class="refresh-button" type="submit" id="from_mast"></button>
+                        <div class="tooltip">
+                            <form method="post" action="{% url 'add_or_update_tic' %}" style="display: inline-block;">
+                                {% csrf_token %}
                                 <input type="hidden" id="tess_id" name="tess_id" value="{{tess_id}}">
-                                <span class="tooltiptext">Refresh metadata</span>
-                            </div>
-                        </form>
+                                <button class="refresh-button" type="submit" id="from_mast"></button>
+                            </form>
+                            <span class="tooltiptext">Refresh metadata</span>
+                        </div>
                         <form action="ephem/{{tess_id}}" style="display: inline-block;">
                             <div class="tooltip">
                                 <button class="ephem-button" id="ephem"></button>
@@ -102,7 +112,7 @@
         </thead>
         {% for eb in list_of_ebs %}
             <tr>
-                <td> <a href="{{tess_id}}.{{eb.signal_id}}">{{ eb.signal_id }}</a> </td>
+                <td> <a href="{{tess_id|stringformat:'010d'}}.{{eb.signal_id|stringformat:'02d'}}">{{ eb.signal_id }}</a> </td>
                 <td> {{ eb.in_catalog }} </td>
                 <td> {{ eb.bjd0 }} </td>
                 <td> {{ eb.bjd0_uncert }} </td>
@@ -150,10 +160,17 @@
     </table>
 
     <div align="center">
-        <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.TESS-SPOC.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
-        <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.TESS-SPOC.ph.png" alt="Phase plot" width="33%">
-        <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.TESS-SPOC.lc.png" alt="Timeseries plot" width="66%">
-        <img src="static/catalog/spd_figs/tic{{tess_id|stringformat:'010d'}}.TESS-SPOC.spd.png" alt="Spectral power density plot" width="33%">
+        {% if provenance_name %}
+            <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{provenance_name}}.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
+            <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.{{provenance_name}}.ph.png" alt="Phase plot" width="33%">
+            <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{provenance_name}}.lc.png" alt="Timeseries plot" width="66%">
+            <img src="static/catalog/spd_figs/tic{{tess_id|stringformat:'010d'}}.{{provenance_name}}.spd.png" alt="Spectral power density plot" width="33%">
+        {% else %}
+            <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.TESS-SPOC.zlc.png" alt="Zoomed-in timeseries plot" width="66%">
+            <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.{{signal_id|stringformat:'02d'}}.TESS-SPOC.ph.png" alt="Phase plot" width="33%">
+            <img src="static/catalog/lc_figs/tic{{tess_id|stringformat:'010d'}}.TESS-SPOC.lc.png" alt="Timeseries plot" width="66%">
+            <img src="static/catalog/spd_figs/tic{{tess_id|stringformat:'010d'}}.TESS-SPOC.spd.png" alt="Spectral power density plot" width="33%">
+        {% endif %}
     </div>
 
     {% else %}

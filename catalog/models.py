@@ -111,10 +111,8 @@ class TIC(models.Model):
         ----------
         tess_id : int, required
             TESS ID of the target star.
-        download_data : bool, optional, default True
+        syndicate_data : bool, optional, default True
             If True, the method will download the data from MAST.
-        download_path : str, optional, default './'
-            The root directory where the data will be downloaded.
         create_static : bool, optional, default True
             If True, the method will create static files for the target.
         static_dir : str, optional, default 'static/catalog'
@@ -126,6 +124,11 @@ class TIC(models.Model):
         -------
         TIC instance
             An instance of the TIC class with the data from MAST.
+
+        Raises
+        ------
+        ValueError
+            If the sector is not found in the database.
         """
 
         meta = backend.download_meta(tess_id)
@@ -141,6 +144,9 @@ class TIC(models.Model):
 
         # add sectors:
         for sector_id in sectors:
+            sobj = Sector.objects.get(sector_id=sector_id)
+            if sobj is None:
+                raise ValueError(f'sector {sector_id} not found in the database.')
             tic.sectors.add(Sector.objects.get(sector_id=sector_id))
 
         # add provenances:
@@ -149,18 +155,16 @@ class TIC(models.Model):
             tic.provenances.add(prov)
 
         # download data if requested:
-        tic.download = kwargs.get('download_data', True)
-        tic.destination = kwargs.get('download_path', './')
+        tic.download = kwargs.get('syndicate_data', True)
+        overwrite = kwargs.get('overwrite_static_files', False)
         if tic.download:
-            tic.download_data(destination=tic.destination)
+            tic.syndicate_data(force_overwrite=overwrite)
 
         # create static files if requested:
         tic.create_static = kwargs.get('create_static', True)
-        tic.static_dir = kwargs.get('static_dir', 'static/catalog')
-        overwrite = kwargs.get('overwrite_static_files', False)
 
         if tic.create_static:
-            tic.create_static_files(static_dir=tic.static_dir, data_dir=tic.destination, force_overwrite=overwrite)
+            tic.create_static_files(force_overwrite=overwrite)
 
         return tic
 

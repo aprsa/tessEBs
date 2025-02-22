@@ -6,6 +6,8 @@ from . import views
 urlpatterns = [
     # website views:
     path('', views.MainView.as_view(), name='main'),
+    path('<int:tess_id>.<str:provenance_name>.<int:signal_id>', views.DetailsView.as_view(), name='details'),
+    path('<int:tess_id>.<str:provenance_name>', views.DetailsView.as_view(), name='details'),
     path('<int:tess_id>.<int:signal_id>', views.DetailsView.as_view(), name='details'),
     path('<int:tess_id>', views.DetailsView.as_view(), name='details'),
     path('about', TemplateView.as_view(template_name='static/about.html'), name='about'),

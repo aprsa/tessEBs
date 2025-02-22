@@ -1,11 +1,13 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import os
 import re
 import csv
 import json
 
 import numpy as np
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, FileResponse
 from django.utils.decorators import method_decorator
@@ -41,7 +43,7 @@ class MainView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['link'] = 'https://tessebs.villanova.edu/?order_by=tic'
+        context['link'] = '?order_by=tic'
         context['ebno'] = self.ebno
         context['page_of_EBs'] = self.paginator.get_page(self.page_num)
         context['fields'] = ['tic__tess_id', 'sectors', 'bjd0', 'bjd0_uncert', 'period', 'period_uncert', 'morph_coeff', 'source', 'flags']
@@ -70,6 +72,11 @@ class DetailsView(TemplateView):
         else:
             context['tic'] = tic_list[0]
         context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
+
+        # check if the syndicated fits file exists:
+        fits_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_data', f'tic{tess_id:010d}.fits')
+        context['data_exist'] = os.path.exists(fits_file)
+
         return context
 
 
@@ -385,38 +392,20 @@ class ApiLombScargleView(View):
             return JsonResponse({'error': str(e)}, status=400)
 
 
-# @method_decorator(login_required, name='dispatch')
-# class ApiLombScargleView(View):
-#     def post(self, request):
-#         try:
-#             data = json.loads(request.body)
-
-#             time = np.array(data.get('time'))
-#             flux = np.array(data.get('flux'))
-#             ferr = None
-#             pmin = data.get('pmin', 0.1)
-#             pmax = data.get('pmax', 10.0)
-#             pstep = data.get('pstep', 0.001)
-#             npeaks = data.get('npeaks', 0)
-
-#             pgram = pl.run_lombscargle(time, flux, ferr, pmin, pmax, pstep, npeaks)
-
-#             return JsonResponse({
-#                 'period': pgram['period'].tolist(),
-#                 'power': pgram['power'].tolist()
-#             })
-#         except Exception as e:
-#             return JsonResponse({'error': str(e)}, status=400)
-
-
-# @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(login_required, name='dispatch')
 class ApiTicAddView(View):
     def post(self, request):
         try:
             data = request.POST
 
-            tess_id = int(data.get('tess_id'))
-            tic = TIC.from_mast(tess_id, create_static=False)
+            tess_id = data.get('tess_id', None)
+            if tess_id is None:
+                return JsonResponse({
+                    'status': 'failure',
+                    'error': 'tess_id not provided'
+                }, status=400)
+
+            tic = TIC.from_mast(int(tess_id), syndicate_data=False, create_static=False)
             tic.save()
 
             return redirect(request.META.get('HTTP_REFERER'))
@@ -424,12 +413,12 @@ class ApiTicAddView(View):
             # return JsonResponse({
             #     'status': 'success',
             #     'data': data,
-            #     'tess_id': tess_id
+            #     'tess_id': tess_id,
+            #     # 'data': data,
             # })
         except Exception as e:
             return JsonResponse({
                 'status': 'failure',
-                'data': data,
                 'error': str(e),
             }, status=400)
 
