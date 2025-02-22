@@ -358,6 +358,7 @@ class ApiSyndicateDataView(View):
 
         force_overwrite = data.get('force_overwrite', False)
         tic.syndicate_data(force_overwrite=force_overwrite)
+        tic.attach_spds_to_data()
 
         return JsonResponse({
             'status': 'success',

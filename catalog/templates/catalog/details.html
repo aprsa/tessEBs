@@ -64,26 +64,43 @@
                 </td>
                 {% if user.is_authenticated %}
                     <td style="white-space: nowrap;">
-                        <div class="tooltip">
-                            <form method="post" action="{% url 'add_or_update_tic' %}" style="display: inline-block;">
+                        <!-- UPDATE META-DATA BUTTON -->
+                        <form method="post" action="{% url 'add_or_update_tic' %}" style="display: inline-block;">
+                            <div class="tooltip">
                                 {% csrf_token %}
                                 <input type="hidden" id="tess_id" name="tess_id" value="{{tess_id}}">
                                 <button class="refresh-button" type="submit" id="from_mast"></button>
-                            </form>
-                            <span class="tooltiptext">Refresh metadata</span>
-                        </div>
+                                <span class="tooltiptext">Refresh metadata</span>
+                            </div>
+                        </form>
+
+                        <!-- DATA SYNDICATION BUTTON -->
+                        <form method="post" action="{% url 'syndicate_data' %}" style="display: inline-block;">
+                            <div class="tooltip">
+                                {% csrf_token %}
+                                <input type="hidden" id="tess_id" name="tess_id" value="{{tess_id}}">
+                                <button class="syndicate-button" type="submit" id="syndicate"></button>
+                                <span class="tooltiptext">Syndicate data</span>
+                            </div>
+                        </form>
+
+                        <!-- EPHEMERIDES BUTTON -->
                         <form action="ephem/{{tess_id}}" style="display: inline-block;">
                             <div class="tooltip">
                                 <button class="ephem-button" id="ephem"></button>
                                 <span class="tooltiptext">Ephemerides</span>
                             </div>
                         </form>
+
+                        <!-- TRIAGE BUTTON -->
                         <form action="triage/{{tess_id}}" style="display: inline-block;">
                             <div class="tooltip">
                                 <button class="triage-button" id="triage"></button>
                                 <span class="tooltiptext">Triage</span>
                             </div>
                         </form>
+
+                        <!-- ADMIN BUTTON -->
                         <form action="admin/catalog/eb/{{tess_id|add:"0"}}/change" style="display: inline-block;">
                             <div class="tooltip">
                                 <button class="admin-button" id="admin"></button>
