@@ -752,7 +752,9 @@ class EphemerisSource(models.Model):
     reference = models.CharField(max_length=64, null=True, blank=True)
 
     def __str__(self):
-        return '%s %s' % (self.model, self.version)
+        if self.model == 'manual':
+            return f'{self.author} ({self.model})'
+        return f'{self.model} {self.version}'
 
     def __repr__(self):
         return (

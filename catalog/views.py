@@ -66,11 +66,9 @@ class DetailsView(TemplateView):
         tess_id = context.get('tess_id', None)
         signal_id = context.get('signal_id', 1)
         context['signal_id'] = signal_id
-        tic_list = TIC.objects.filter(tess_id=tess_id)
-        if tic_list.count() == 0:
-            context['tic'] = None
-        else:
-            context['tic'] = tic_list[0]
+
+        tic = TIC.objects.get(tess_id=tess_id)
+        context['tic'] = tic
         context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
 
         # check if the syndicated fits file exists:
@@ -360,6 +358,7 @@ class ApiSyndicateDataView(View):
         tic.syndicate_data(force_overwrite=force_overwrite)
         tic.attach_spds_to_data()
 
+        return redirect(request.META.get('HTTP_REFERER'))
         return JsonResponse({
             'status': 'success',
         })
@@ -430,6 +429,7 @@ class ApiEphemAddView(View):
         try:
             data = json.loads(request.body.decode('utf-8'))
             
+            tess_id = data.get('tess_id')
             t0 = data.get('t0')
             period = data.get('period')
             model = data.get('model')
@@ -437,9 +437,16 @@ class ApiEphemAddView(View):
             reference = data.get('reference')
             attribution = data.get('attribution')
 
-            # * run get_or_create(EphemerisSource)
-            # * instantiate a new Ephemeris
-            # * save it to database
+            if model == 'manual' and attribution == 'self':
+                attribution = f'{request.user.first_name} {request.user.last_name}'
+
+            eph_source, created = EphemerisSource.objects.get_or_create(author=attribution, model=model, version=version, reference=reference)
+            if created:
+                eph_source.save()
+
+            tic = TIC.objects.get(tess_id=tess_id)
+            ephem = Ephemeris(tic=tic, source=eph_source, bjd0=t0, period=period)
+            ephem.save()
 
             return JsonResponse({
                 'status': 'success',

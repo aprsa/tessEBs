@@ -42,6 +42,10 @@ def download_meta(tess_id):
             asas_id = other_id.split(' ')[1] if 'ASAS' in other_id else None
             kepler_id = other_id.split(' ')[1] if 'Kepler' in other_id else None
             gaia_dr3_id = other_id.split(' ')[2] if 'DR3' in other_id else None
+    else:
+        asas_id = None
+        kepler_id = None
+        gaia_dr3_id = None
 
     sectors = tc.get_sectors(objectname=f'TIC {tess_id}')['sector'].data
     provenances = [str(provenance) for provenance in set(obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name'])]

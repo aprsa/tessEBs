@@ -88,8 +88,14 @@ def create_ephemeris_ui(tess_id):
     })
 
     # figure definitions:
+    
+    tooltips = [
+        ('coords', '@time{0.000}, @flux'),
+    ]
+    
     lcf = figure(
-        tools='pan,box_zoom,wheel_zoom,save,reset',  # also available: help, hover, box_select, lasso_select, poly_select, tap, crosshair
+        tools='pan,box_zoom,save,reset',  # also available: help, hover, box_select, wheel_zoom, lasso_select, poly_select, tap, crosshair
+        tooltips=tooltips,
         active_drag='box_zoom',
         title=f'TIC {tess_id} timeseries',
         x_axis_label='Time [days]',
@@ -97,6 +103,7 @@ def create_ephemeris_ui(tess_id):
         sizing_mode='stretch_width',
         height=300,
     )
+    lcf.toolbar.active_inspect = None
     lcf.toolbar.logo = None
 
     spdf = figure(
@@ -290,7 +297,7 @@ def create_ephemeris_ui(tess_id):
                 't0_widget': t0_widget,
                 'period_widget': period_widget
             }))
-        tooltip = Tooltip(content=f'source: {ephem.source.model} {(ephem.source.version) or ""}', position='right')
+        tooltip = Tooltip(content=f'source: {ephem.source.author} ({ephem.source.model})', position='right')
         help_button = HelpButton(tooltip=tooltip)
         ephem_rows.append(row([button, help_button]))
 
@@ -454,6 +461,7 @@ def create_ephemeris_ui(tess_id):
     commit_button.js_on_click(CustomJS(
         args=dict(
             dialog=dialog,
+            tess_id=tess_id,
             t0_widget=t0_widget,
             period_widget=period_widget,
             ephem_model_widget=ephem_model_widget,
@@ -472,6 +480,7 @@ def create_ephemeris_ui(tess_id):
                 },
                 body: JSON.stringify({
                     't0': t0_widget.value,
+                    'tess_id': tess_id,
                     'period': period_widget.value,
                     'model': ephem_model_widget.value,
                     'version': ephem_model_version_widget.value,
@@ -488,7 +497,10 @@ def create_ephemeris_ui(tess_id):
             })
             .then(data => {
                 if (data.status === 'success') {
-                    console.log('Successfully added ephemeris to the database.');
+                    console.log('Ephemeris added to the database.');
+                    
+                    // reload the window:
+                    window.location.reload();
                 } else {
                     console.log('Failed to add ephemeris to the database.');
                 }
@@ -527,6 +539,16 @@ def create_ephemeris_ui(tess_id):
         """
     ))
 
+    go_back_button = Button(
+        label='Go back',
+        button_type='default',
+        width=250,
+        height=35,
+    )
+    go_back_button.js_on_click(CustomJS(
+        code="window.history.back();"
+    ))
+
     controls = column(
         children=[
             provenance_widget,
@@ -541,6 +563,7 @@ def create_ephemeris_ui(tess_id):
             run_ls_widget,
             *ephem_rows,
             add_ephem_widget,
+            go_back_button,
         ],
         sizing_mode='stretch_width',
     )
