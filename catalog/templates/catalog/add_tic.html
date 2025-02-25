@@ -6,17 +6,22 @@
 <h1> {% if already_in_cat %} Update an existing {% else %} Add a new {% endif %} TIC entry: </h1>
 
 <script>
-    function runMastQuery(tess_id) {
+    function download_meta() {
         // disable the button
-        document.getElementById('query_mast_button').disabled = true;
+        document.getElementById('download_metadata_button').disabled = true;
+
+        // get TESS ID from the form:
+        const tess_id = document.getElementsByName('tess_id')[0].value;
+
+        const formData = new FormData();
+        formData.append('tess_id', tess_id);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
         // call the API to query MAST:
-        fetch('/api/query/' + tess_id, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
+        fetch('/api/tic/download_meta', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
         })
         .then(response => {
             if (!response.ok) {
@@ -49,105 +54,109 @@
         });
 
         // re-enable the button
-        document.getElementById('query_mast_button').disabled = false;
+        document.getElementById('download_metadata_button').disabled = false;
     }
 </script>
 
-<form method="post" action="{% url 'add_or_update_tic' %}">
-    {% csrf_token %}
-    <table class="mast_query_table">
-        <tr>
-            <td style="white-space: nowrap;"> TESS ID: </td>
-            <td style="white-space: nowrap;"> <input type="number" name="tess_id" value="{{ tess_id }}" min="0" max="1000000000" step="1"> </td>
-            <td style="white-space: nowrap;"> <button type="button" id="query_mast_button" onclick="runMastQuery({{tess_id}});">Query MAST</button> </td>
-            <td style="white-space: nowrap;"> <input type="checkbox" name="create_static" checked> Create static data </td>
+<table class="download_meta_table">
+    <tr>
+        <td style="white-space: nowrap;"> TESS ID: </td>
+        <form method="post" action="{% url 'add_or_update_tic' %}" style="display: inline-block;">
             <td style="white-space: nowrap;">
-                <button type="submit" id="add_or_update_button"> {% if already_in_cat %} Update {% else %} Add {% endif %} </button>
+                <input type="number" name="tess_id" value="{{ tess_id }}" min="0" max="1000000000" step="1">
             </td>
-        </tr>
-    </table>
+            <td style="white-space: nowrap;">
+                <button type="button" id="download_metadata_button" onclick="download_meta();"> Download metadata </button>
+            </td>
+            {% csrf_token %}
+        </form>
+        <td style="white-space: nowrap;"> <input type="checkbox" name="create_static" checked> Create static data </td>
+        <td style="white-space: nowrap;">
+            <button type="submit" id="add_or_update_button"> {% if already_in_cat %} Update {% else %} Add {% endif %} </button>
+        </td>
+    </tr>
+</table>
 
-    <div class="parameter-grid">
-        <div class="parameter">
-            <div class="parameter_name"> Right ascension </div>
-            <div class="parameter_value"> <input type="number" id="ra" name="ra" value="" min="0" max="360" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Declination </div>
-            <div class="parameter_value"> <input type="number" id="dec" name="dec" value="" min="-90" max="90" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Galactic longitude </div>
-            <div class="parameter_value"> <input type="number" id="glon" name="glon" value="" min="0" max="360" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Galactic latitude </div>
-            <div class="parameter_value"> <input type="number" id="glat" name="glat" value="" min="-90" max="90" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> TESS magnitude </div>
-            <div class="parameter_value"> <input type="number" id="Tmag" name="Tmag" value="" min="0" max="30" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Effective temperature </div>
-            <div class="parameter_value"> <input type="number" id="teff" name="teff" value="" min="2000" max="100000" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Surface gravity </div>
-            <div class="parameter_value"> <input type="number" id="logg" name="logg" value="" min="0" max="10" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Metal abundance </div>
-            <div class="parameter_value"> <input type="number" id="abun" name="abun" value="" min="-10" max="10" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Proper motion in R.A. </div>
-            <div class="parameter_value"> <input type="number" id="pmra" name="pmra" value="" min="-1000" max="1000" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Proper motion in Dec. </div>
-            <div class="parameter_value"> <input type="number" id="pmdec" name="pmdec" value="" min="-1000" max="1000" step="any"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Gaia DR2 ID </div>
-            <div class="parameter_value"> <input type="number" id="gaia_id" name="gaia_id" value="" min="0" max="any" step="1"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Gaia DR3 ID </div>
-            <div class="parameter_value"> <input type="number" id="gaia_dr3_id" name="gaia_dr3_id" value="" min="0" max="1000000000" step="1"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Kepler ID </div>
-            <div class="parameter_value"> <input type="number" id="kepler_id" name="kepler_id" value="" min="0" max="1000000000" step="1"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> ASAS ID </div>
-            <div class="parameter_value"> <input type="number" id="asas_id" name="asas_id" value="" min="0" max="1000000000" step="1"> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Sectors </div>
-            <div class="parameter_value"> <input type="text" id="sectors" name="sectors" value=""> </div>
-        </div>
-
-        <div class="parameter">
-            <div class="parameter_name"> Provenances </div>
-            <div class="parameter_value"> <input type="text" id="provenances" name="provenances" value=""> </div>
-        </div>
+<div class="parameter-grid">
+    <div class="parameter">
+        <div class="parameter_name"> Right ascension </div>
+        <div class="parameter_value"> <input type="number" id="ra" name="ra" value="" min="0" max="360" step="any"> </div>
     </div>
-</form>
+
+    <div class="parameter">
+        <div class="parameter_name"> Declination </div>
+        <div class="parameter_value"> <input type="number" id="dec" name="dec" value="" min="-90" max="90" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Galactic longitude </div>
+        <div class="parameter_value"> <input type="number" id="glon" name="glon" value="" min="0" max="360" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Galactic latitude </div>
+        <div class="parameter_value"> <input type="number" id="glat" name="glat" value="" min="-90" max="90" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> TESS magnitude </div>
+        <div class="parameter_value"> <input type="number" id="Tmag" name="Tmag" value="" min="0" max="30" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Effective temperature </div>
+        <div class="parameter_value"> <input type="number" id="teff" name="teff" value="" min="2000" max="100000" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Surface gravity </div>
+        <div class="parameter_value"> <input type="number" id="logg" name="logg" value="" min="0" max="10" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Metal abundance </div>
+        <div class="parameter_value"> <input type="number" id="abun" name="abun" value="" min="-10" max="10" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Proper motion in R.A. </div>
+        <div class="parameter_value"> <input type="number" id="pmra" name="pmra" value="" min="-1000" max="1000" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Proper motion in Dec. </div>
+        <div class="parameter_value"> <input type="number" id="pmdec" name="pmdec" value="" min="-1000" max="1000" step="any"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Gaia DR2 ID </div>
+        <div class="parameter_value"> <input type="number" id="gaia_id" name="gaia_id" value="" min="0" max="any" step="1"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Gaia DR3 ID </div>
+        <div class="parameter_value"> <input type="number" id="gaia_dr3_id" name="gaia_dr3_id" value="" min="0" max="1000000000" step="1"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Kepler ID </div>
+        <div class="parameter_value"> <input type="number" id="kepler_id" name="kepler_id" value="" min="0" max="1000000000" step="1"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> ASAS ID </div>
+        <div class="parameter_value"> <input type="number" id="asas_id" name="asas_id" value="" min="0" max="1000000000" step="1"> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Sectors </div>
+        <div class="parameter_value"> <input type="text" id="sectors" name="sectors" value=""> </div>
+    </div>
+
+    <div class="parameter">
+        <div class="parameter_name"> Provenances </div>
+        <div class="parameter_value"> <input type="text" id="provenances" name="provenances" value=""> </div>
+    </div>
+</div>
 
 {% endblock %}
