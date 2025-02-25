@@ -19,6 +19,11 @@ def download_meta(tess_id):
     """
 
     mast_entry = cat.query_criteria(catalog='TIC', ID=tess_id)
+    if len(mast_entry) == 0:
+        return {
+            'status': 'error',
+            'message': 'No entry found in MAST database.'
+        }
 
     def get(entry, key):
         return entry[key][0] if ~np.isnan(entry[key][0]) else None
@@ -37,7 +42,7 @@ def download_meta(tess_id):
     gaia_id = int(mast_entry['GAIA'][0]) if mast_entry['GAIA'].tolist()[0] is not None else None
 
     other_ids = simbad.query_objectids(f'TIC {tess_id}')
-    if other_ids:
+    if other_ids is not None:
         for other_id in other_ids['ID']:
             asas_id = other_id.split(' ')[1] if 'ASAS' in other_id else None
             kepler_id = other_id.split(' ')[1] if 'Kepler' in other_id else None
@@ -47,10 +52,11 @@ def download_meta(tess_id):
         kepler_id = None
         gaia_dr3_id = None
 
-    sectors = tc.get_sectors(objectname=f'TIC {tess_id}')['sector'].data
+    sectors = [int(s) for s in tc.get_sectors(objectname=f'TIC {tess_id}')['sector'].data]
     provenances = [str(provenance) for provenance in set(obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name'])]
 
-    return {
+    meta = {
+        'status': 'success',
         'ra': ra,
         'dec': dec,
         'glon': glon,
@@ -68,3 +74,10 @@ def download_meta(tess_id):
         'sectors': sectors,
         'provenances': provenances,
     }
+
+    # convert numpy types to native for json serialization:    
+    for key, value in meta.items():
+        if isinstance(value, np.generic):
+            meta[key] = value.item()
+
+    return meta
