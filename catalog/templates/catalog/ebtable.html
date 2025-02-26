@@ -64,10 +64,10 @@
                 {% if 'tic__glat' in fields %}        <td> {{ eb.tic.glat|stringformat:"6.6f" }} </td> {% endif %}
                 {% if 'tic__pmra' in fields %}        <td> {{ eb.tic.pmra }} </td> {% endif %}
                 {% if 'tic__pmdec' in fields %}       <td> {{ eb.tic.pmdec }} </td> {% endif %}
-                {% if 'bjd0' in fields %}             <td> {{ eb.bjd0|floatformat:6 }} </td> {% endif %}
-                {% if 'bjd0_uncert' in fields %}      <td> {{ eb.bjd0_uncert|floatformat:6 }} </td> {% endif %}
-                {% if 'period' in fields %}           <td> {{ eb.period|floatformat:7 }} </td> {% endif %}
-                {% if 'period_uncert' in fields %}    <td> {{ eb.period_uncert|floatformat:7 }} </td> {% endif %}
+                {% if 'bjd0' in fields %}             <td> {{ eb.ephemeris.bjd0|floatformat:6 }} </td> {% endif %}
+                {% if 'bjd0_uncert' in fields %}      <td> {{ eb.ephemeris.bjd0_uncert|floatformat:6 }} </td> {% endif %}
+                {% if 'period' in fields %}           <td> {{ eb.ephemeris.period|floatformat:7 }} </td> {% endif %}
+                {% if 'period_uncert' in fields %}    <td> {{ eb.ephemeris.period_uncert|floatformat:7 }} </td> {% endif %}
                 {% if 'morph_coeff' in fields %}      <td> {{ eb.morph_coeff|floatformat:3 }} </td> {% endif %}
                 {% if 'tic__teff' in fields %}        <td> {{ eb.tic.teff|stringformat:"0.0f" }} </td> {% endif %}
                 {% if 'tic__logg' in fields %}        <td> {{ eb.tic.logg|stringformat:"2.2f" }} </td> {% endif %}

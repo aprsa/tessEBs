@@ -1,0 +1,70 @@
+{% extends "catalog/base.html" %}
+{% load custom_tags %}
+{% load static %}
+
+{% block title %} Triage {% endblock %}
+
+{% block content %}
+
+<style>
+.checkbox-label {
+    position: relative;
+    padding-left: 40px;  /* Just enough space for the checkbox */
+    margin-right: 1em;   /* Space between different checkboxes */
+    line-height: 1;
+}
+
+.checkbox-label input[type="checkbox"] {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    padding: 0;
+    width: 13px;
+    height: 13px;
+}
+</style>
+
+{% if user.is_authenticated %}
+
+    <h1> TIC {{ tic.tess_id }} </h1>
+
+    <form method="post" action="">
+        {% csrf_token %}
+        <label for="provenance">Provenance:</label>
+        <select id="provenance" name="provenance">
+            {% for provenance in tic.provenances.all %}
+                <option value="{{ provenance.name }}"> {{ provenance.name }} </option>
+            {% endfor %}
+        </select>
+        <label for="ephemeris">Ephemeris:</label>
+        <select id="ephemeris" name="ephemeris">
+            {% for ephemeris in tic.ephemerides.all %}
+                <option value="{{ ephemeris }}"> {{ ephemeris }} </option>
+            {% endfor %}
+        </select>
+        <br><br>
+
+        {% for provenance in tic.provenances.all %}
+            <img src='{% static plots|get_item:provenance.name|get_item:"lc" %}' alt="lightcurve"><br>
+        {% endfor %}
+
+        <br><br>
+
+
+        Flags:
+            <label class="checkbox-label"><input type="checkbox" name="flag_ambiguous" value="0">Ambiguous</label>
+            <label class="checkbox-label"><input type="checkbox" name="flag_pulsating" value="0">Pulsating</label>
+            <label class="checkbox-label"><input type="checkbox" name="flag_heartbeat" value="0">Heartbeat</label>
+            <label class="checkbox-label"><input type="checkbox" name="flag_multis" value="0">Multi</label>
+            <label class="checkbox-label"><input type="checkbox" name="flag_single" value="0">Single eclipse</label>
+            <br>
+        <input type="submit" value="Add to catalog">
+    </form>
+
+{% else %}
+    Please authenticate first in order to access the triage area.
+{% endif %}
+
+{% endblock %}

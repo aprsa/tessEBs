@@ -131,10 +131,10 @@
             <tr>
                 <td> <a href="{{tess_id|stringformat:'010d'}}.{{eb.signal_id|stringformat:'02d'}}">{{ eb.signal_id }}</a> </td>
                 <td> {{ eb.in_catalog }} </td>
-                <td> {{ eb.bjd0 }} </td>
-                <td> {{ eb.bjd0_uncert }} </td>
-                <td> {{ eb.period }} </td>
-                <td> {{ eb.period_uncert }} </td>
+                <td> {{ eb.ephemeris.bjd0 }} </td>
+                <td> {{ eb.ephemeris.bjd0_uncert }} </td>
+                <td> {{ eb.ephemeris.period }} </td>
+                <td> {{ eb.ephemeris.period_uncert }} </td>
                 <td> {{ eb.morph_coeff|floatformat:3 }} </td>
                 <td> {{ eb.date_modified }} </td>
             </tr>

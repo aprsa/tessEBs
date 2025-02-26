@@ -561,6 +561,7 @@ class EB(models.Model):
         LCF = 'LCF', 'Light Curve File (LCF)'
     source = models.CharField(max_length=3, choices=ObjectSource.choices, default=ObjectSource.LCF)
 
+    ephemeris = models.OneToOneField('catalog.Ephemeris', on_delete=models.SET_NULL, null=True, blank=True, related_name='ephemeris')
     bjd0 = models.FloatField('bjd0', null=True, blank=True)
     bjd0_uncert = models.FloatField('bjd0 uncertainty', null=True, blank=True)
     period = models.FloatField('orbital period', null=True, blank=True)
@@ -597,8 +598,6 @@ class EB(models.Model):
             models.UniqueConstraint(fields=['tic', 'signal_id'], name='eb_id')
         ]
         verbose_name_plural = 'EBs'
-
-    # lc = models.FilePathField('light curve', null=False, default='')
 
     def save(self, *args, **kwargs):
         # we are overloading the save() method to be able to test for duplicates, handle many-to-many relationships,

@@ -21,10 +21,10 @@
         {% if 'tic__glat' in fields %}        {{ eb.tic.glat|stringformat:"6.6f" }},    {% endif %}
         {% if 'tic__pmra' in fields %}        {{ eb.tic.pmra }},                        {% endif %}
         {% if 'tic__pmdec' in fields %}       {{ eb.tic.pmdec}},                        {% endif %}
-        {% if 'bjd0' in fields %}             {{ eb.bjd0|floatformat:6 }},              {% endif %}
-        {% if 'bjd0_uncert' in fields %}      {{ eb.bjd0_uncert|floatformat:6 }},       {% endif %}
-        {% if 'period' in fields %}           {{ eb.period|floatformat:7 }},            {% endif %}
-        {% if 'period_uncert' in fields %}    {{ eb.period_uncert|floatformat:7 }},     {% endif %}
+        {% if 'bjd0' in fields %}             {{ eb.ephemeris.bjd0|floatformat:6 }},              {% endif %}
+        {% if 'bjd0_uncert' in fields %}      {{ eb.ephemeris.bjd0_uncert|floatformat:6 }},       {% endif %}
+        {% if 'period' in fields %}           {{ eb.ephemeris.period|floatformat:7 }},            {% endif %}
+        {% if 'period_uncert' in fields %}    {{ eb.ephemeris.period_uncert|floatformat:7 }},     {% endif %}
         {% if 'morph_coeff' in fields %}      {{ eb.morph_coeff|floatformat:3 }},       {% endif %}
         {% if 'tic__teff' in fields %}        {{ eb.tic.teff|stringformat:"0.0f" }},    {% endif %}
         {% if 'tic__logg' in fields %}        {{ eb.tic.logg|stringformat:"2.2f" }},    {% endif %}
@@ -34,8 +34,6 @@
             {% if eb.ambiguous %}A{% endif %}{% if eb.insufficient %}I{% endif %}{% if eb.pulscomp %}P{% endif %}{% if eb.heartbeat %}H{% endif %}{% if eb.multi %}M{% endif %},
         {% endif %}
         <br>
-    <!-- {{eb.tic.tess_id}},{{eb.signal_id}},{{eb.bjd0}},{{eb.bjd0_uncert}},{{eb.period}},{{eb.period_uncert}},{{eb.morph_coeff}},{{eb.tic.ra}},{{eb.tic.dec}},{{eb.tic.Tmag}},{{eb.tic.glon}},{{eb.tic.glat}},{{eb.tic.teff}},{{eb.tic.logg}},{{eb.tic.abun}}<br> -->
-        <!-- ,"{{eb.sectors.all|join:" "}}" -->
     {% endfor %}
 {% else %}
 

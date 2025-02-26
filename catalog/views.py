@@ -238,11 +238,12 @@ class AddTICView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         tess_id = context.get('tess_id', None)
-        
-        tic_list = TIC.objects.filter(tess_id=tess_id)
-        context['already_in_cat'] = True if tic_list.count() > 0 else False
-        # if context['already_in_cat']:
-        #     pre-fill the fields?
+
+        if tess_id is not None:
+            tic = TIC.objects.get(tess_id=tess_id)
+            context['already_in_cat'] = tic is not None
+            # if context['already_in_cat']:
+            #     pre-fill the fields?
 
         return context
 
@@ -267,6 +268,38 @@ class EphemView(TemplateView):
 
         context['bokeh_script'] = script
         context['bokeh_div'] = div
+
+        return context
+
+
+class TriageView(TemplateView):
+    template_name = 'catalog/triage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tess_id = context.get('tess_id', None)
+
+        tic = TIC.objects.get(tess_id=tess_id)
+        context['tic'] = tic
+        context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
+
+        # check if the syndicated fits file exists:
+        fits_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_data', f'tic{tess_id:010d}.fits')
+        context['data_exist'] = os.path.exists(fits_file)
+
+        # check if static plots exist:
+        context['plots'] = {}
+        for provenance in tic.provenances.all():
+            context['plots'][provenance.name] = {}
+            lc_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_figs', f'tic{tess_id:010d}.{provenance.name}.lc.png')
+            zlc_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_figs', f'tic{tess_id:010d}.{provenance.name}.zlc.png')
+            spd_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'spd_figs', f'tic{tess_id:010d}.{provenance.name}.spd.png')
+            ph_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_figs', f'tic{tess_id:010d}.{provenance.name}.ph.png')
+
+            context['plots'][provenance.name]['lc'] = f'catalog/lc_figs/{os.path.basename(lc_file)}' if os.path.exists(lc_file) else None
+            context['plots'][provenance.name]['zlc'] = f'catalog/lc_figs/{os.path.basename(zlc_file)}' if os.path.exists(zlc_file) else None
+            context['plots'][provenance.name]['spd'] = f'catalog/spd_figs/{os.path.basename(spd_file)}' if os.path.exists(spd_file) else None
+            context['plots'][provenance.name]['ph'] = f'catalog/lc_figs/{os.path.basename(ph_file)}' if os.path.exists(ph_file) else None
 
         return context
 
@@ -311,7 +344,7 @@ class ApiTicDownloadMetaView(View):
                 'error': 'tess_id not provided'
             }, status=400)
 
-        meta = backend.download_meta(tess_id)
+        meta = backend.download_meta(int(tess_id))
 
         return JsonResponse({
             'status': 'success',
