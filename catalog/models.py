@@ -562,16 +562,10 @@ class EB(models.Model):
     source = models.CharField(max_length=3, choices=ObjectSource.choices, default=ObjectSource.LCF)
 
     ephemeris = models.OneToOneField('catalog.Ephemeris', on_delete=models.SET_NULL, null=True, blank=True, related_name='ephemeris')
-    bjd0 = models.FloatField('bjd0', null=True, blank=True)
-    bjd0_uncert = models.FloatField('bjd0 uncertainty', null=True, blank=True)
-    period = models.FloatField('orbital period', null=True, blank=True)
-    period_uncert = models.FloatField('period uncertainty', null=True, blank=True)
-    ephem_2g_logprob = models.FloatField('2-gaussian logp', null=True, blank=True)
-    ephem_pf_logprob = models.FloatField('polyfit logp', null=True, blank=True)
-
     morph_coeff = models.FloatField('morphology coefficient', null=True, blank=True)
 
     # eclipse properties:
+    # TODO: create a new class for eclipse properties!
     prim_width_pf = models.FloatField('primary eclipse width from the polyfit model', null=True, blank=True, editable=False)
     sec_width_pf = models.FloatField('secondary eclipse width from the polyfit model', null=True, blank=True, editable=False)
     prim_depth_pf = models.FloatField('primary eclipse depth from the polyfit model', null=True, blank=True, editable=False)
@@ -700,12 +694,7 @@ class EB(models.Model):
             f"date_added={self.date_added}, "
             f"date_modified={self.date_modified}, "
             f"source='{self.source}', "
-            f"bjd0={self.bjd0}, "
-            f"bjd0_uncert={self.bjd0_uncert}, "
-            f"period={self.period}, "
-            f"period_uncert={self.period_uncert}, "
-            f"ephem_2g_logprob={self.ephem_2g_logprob}, "
-            f"ephem_pf_logprob={self.ephem_pf_logprob}, "
+            f"ephemeris={self.ephemeris}, "
             f"morph_coeff={self.morph_coeff}, "
             f"prim_width_pf={self.prim_width_pf}, "
             f"sec_width_pf={self.sec_width_pf}, "
