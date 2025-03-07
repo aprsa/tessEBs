@@ -1,21 +1,29 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import os
 import re
 import csv
+import json
 
 import numpy as np
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, FileResponse
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 
 from csv_export.views import CSVExportView
 
-from django.views.generic import TemplateView, ListView
+from django.views.generic import View, TemplateView, ListView
 from django.views.generic.detail import BaseDetailView
 
+from . import backend
+from . import pipeline as pl
+from .ephemeris_ui import create_ephemeris_ui
 from .models import EB, TIC, Ephemeris, EphemerisSource, Comment
 from .forms import ChangeForm
 
@@ -35,7 +43,7 @@ class MainView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['link'] = 'http://tessebs.villanova.edu/?order_by=tic'
+        context['link'] = '?order_by=tic'
         context['ebno'] = self.ebno
         context['page_of_EBs'] = self.paginator.get_page(self.page_num)
         context['fields'] = ['tic__tess_id', 'sectors', 'bjd0', 'bjd0_uncert', 'period', 'period_uncert', 'morph_coeff', 'source', 'flags']
@@ -58,8 +66,15 @@ class DetailsView(TemplateView):
         tess_id = context.get('tess_id', None)
         signal_id = context.get('signal_id', 1)
         context['signal_id'] = signal_id
-        context['tic'] = TIC.objects.filter(tess_id=tess_id)[0]
+
+        tic = TIC.objects.get(tess_id=tess_id)
+        context['tic'] = tic
         context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
+
+        # check if the syndicated fits file exists:
+        fits_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_data', f'tic{tess_id:010d}.fits')
+        context['data_exist'] = os.path.exists(fits_file)
+
         return context
 
 
@@ -91,6 +106,7 @@ class MASTExport(CSVExportView):
         'tic__pmra',
         'tic__pmdec',
         'tic__Tmag',
+        'tic__teff',
         'bjd0',
         'bjd0_uncert',
         'period',
@@ -138,7 +154,7 @@ class SearchView(TemplateView):
 class SearchResultsView(ListView):
     model = EB
     template_name = 'catalog/search_results.html'
-    
+
     def filter(self):
         self.fields = [
             'tic__tess_id',
@@ -194,7 +210,7 @@ class SearchResultsView(ListView):
         tic_query = self.request.GET.get('tic', None)
         if tic_query:
             self.object_list = EB.objects.filter(Q(tic__tess_id__icontains=tic_query))
-            
+
         else:
             order_by = self.request.GET.get('order_by')
             then_order_by = self.request.GET.get('then_order_by')
@@ -212,8 +228,272 @@ class SearchResultsView(ListView):
         self.paginator = Paginator(self.object_list, 100)
         page_num = self.request.GET.get('page', 1)
         self.page_of_EBs = self.paginator.get_page(page_num)
-    
+
         return self.object_list
+
+
+class AddTICView(TemplateView):
+    template_name = 'catalog/add_tic.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tess_id = context.get('tess_id', None)
+
+        if tess_id is not None:
+            tic = TIC.objects.get(tess_id=tess_id)
+            context['already_in_cat'] = tic is not None
+            # if context['already_in_cat']:
+            #     pre-fill the fields?
+
+        return context
+
+
+class EphemView(TemplateView):
+    template_name = 'catalog/ephem.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tess_id = context.get('tess_id', None)
+        signal_id = context.get('signal_id', 1)
+
+        script, div = create_ephemeris_ui(tess_id)
+
+        context['signal_id'] = signal_id
+        tic_list = TIC.objects.filter(tess_id=tess_id)
+        if tic_list.count() == 0:
+            context['tic'] = None
+        else:
+            context['tic'] = tic_list[0]
+        context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
+
+        context['bokeh_script'] = script
+        context['bokeh_div'] = div
+
+        return context
+
+
+class TriageView(TemplateView):
+    template_name = 'catalog/triage.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tess_id = context.get('tess_id', None)
+
+        tic = TIC.objects.get(tess_id=tess_id)
+        context['tic'] = tic
+        context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
+
+        # check if the syndicated fits file exists:
+        fits_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_data', f'tic{tess_id:010d}.fits')
+        context['data_exist'] = os.path.exists(fits_file)
+
+        # check if static plots exist:
+        context['plots'] = {}
+        for provenance in tic.provenances.all():
+            context['plots'][provenance.name] = {}
+            lc_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_figs', f'tic{tess_id:010d}.{provenance.name}.lc.png')
+            zlc_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_figs', f'tic{tess_id:010d}.{provenance.name}.zlc.png')
+            spd_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'spd_figs', f'tic{tess_id:010d}.{provenance.name}.spd.png')
+            ph_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_figs', f'tic{tess_id:010d}.{provenance.name}.ph.png')
+
+            context['plots'][provenance.name]['lc'] = f'catalog/lc_figs/{os.path.basename(lc_file)}' if os.path.exists(lc_file) else None
+            context['plots'][provenance.name]['zlc'] = f'catalog/lc_figs/{os.path.basename(zlc_file)}' if os.path.exists(zlc_file) else None
+            context['plots'][provenance.name]['spd'] = f'catalog/spd_figs/{os.path.basename(spd_file)}' if os.path.exists(spd_file) else None
+            context['plots'][provenance.name]['ph'] = f'catalog/lc_figs/{os.path.basename(ph_file)}' if os.path.exists(ph_file) else None
+
+        return context
+
+
+class TestApiView(TemplateView):
+    template_name = 'catalog/test_api.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiTestView(View):
+    """
+    Tests the API.
+
+    Returns:
+    --------
+    JsonResponse
+    """
+
+    def post(self, request):
+        return JsonResponse({
+            'status': 'success',
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiTicDownloadMetaView(View):
+    """
+    Downloads metadata for a given TIC ID from MAST and SIMBAD.
+    """
+
+    def post(self, request):
+        data = request.POST
+
+        tess_id = data.get('tess_id', None)
+        if tess_id is None:
+            return JsonResponse({
+                'status': 'failure',
+                'error': 'tess_id not provided'
+            }, status=400)
+
+        meta = backend.download_meta(int(tess_id))
+
+        return JsonResponse({
+            'status': 'success',
+            **meta
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiSyndicateDataView(View):
+    """
+    Syndicate data for a given TIC ID.
+
+    POST parameters:
+    ----------------
+    tess_id: int
+        TIC ID to syndicate data for.
+    force_overwrite: bool
+        If True, overwrite existing data.
+
+    Returns:
+    --------
+    JsonResponse
+    """
+
+    def post(self, request):
+        data = request.POST
+
+        tess_id = data.get('tess_id', None)
+        if tess_id is None:
+            return JsonResponse({
+                'status': 'failure',
+                'error': 'tess_id not provided'
+            }, status=400)
+
+        try:
+            tic = TIC.objects.get(tess_id=tess_id)
+        except TIC.DoesNotExist:
+            return JsonResponse({
+                'status': 'failure',
+                'error': f'tess_id {tess_id} not found'
+            }, status=400)
+
+        force_overwrite = data.get('force_overwrite', False)
+        tic.syndicate_data(force_overwrite=force_overwrite)
+        tic.attach_spds_to_data()
+
+        return redirect(request.META.get('HTTP_REFERER'))
+        return JsonResponse({
+            'status': 'success',
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiLombScargleView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+
+            time = np.array(data.get('time'))
+            flux = np.array(data.get('flux'))
+            pmin = data.get('pmin', 0.1)
+            pmax = data.get('pmax', 10.0)
+            pstep = data.get('pstep', 0.001)
+            npeaks = data.get('npeaks', 0)
+
+            data = {
+                'times': time,
+                'fluxes': flux
+            }
+            # np.savetxt('data.txt', data)
+            pgram = pl.run_lombscargle(data, pmin, pmax, pstep, npeaks)
+
+            return JsonResponse({
+                'period': pgram['periods'].tolist(),
+                'power': pgram['powers'].tolist()
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiTicAddView(View):
+    def post(self, request):
+        try:
+            data = request.POST
+
+            tess_id = data.get('tess_id', None)
+            if tess_id is None:
+                return JsonResponse({
+                    'status': 'failure',
+                    'error': 'tess_id not provided'
+                }, status=400)
+
+            tic = TIC.from_mast(int(tess_id), syndicate_data=False, create_static=False)
+            tic.save()
+
+            return redirect(request.META.get('HTTP_REFERER'))
+            # comment out above and uncomment below to debug
+            # return JsonResponse({
+            #     'status': 'success',
+            #     'data': data,
+            #     'tess_id': tess_id,
+            #     # 'data': data,
+            # })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'failure',
+                'error': str(e),
+            }, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApiEphemAddView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            
+            tess_id = data.get('tess_id')
+            t0 = data.get('t0')
+            period = data.get('period')
+            model = data.get('model')
+            version = data.get('version')
+            reference = data.get('reference')
+            attribution = data.get('attribution')
+
+            if model == 'manual' and attribution == 'self':
+                attribution = f'{request.user.first_name} {request.user.last_name}'
+
+            eph_source, created = EphemerisSource.objects.get_or_create(author=attribution, model=model, version=version, reference=reference)
+            if created:
+                eph_source.save()
+
+            tic = TIC.objects.get(tess_id=tess_id)
+            ephem = Ephemeris(tic=tic, source=eph_source, bjd0=t0, period=period)
+            ephem.save()
+
+            return JsonResponse({
+                'status': 'success',
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'failure',
+                'error': str(e)
+            }, status=400)
+
+
+
+
+
 
 
 def profile(request):
@@ -295,7 +575,7 @@ def _api_ephem(tess_id, username=None):
         ephem_triage_user = 0
 
     return {
-        'tic': tess_id, 
+        'tic': tess_id,
         'ephems': [_ephem_dict(ephem, i+1) for i, ephem in enumerate(ephems)],
         'ephem_triage_total': ephem_triage_total,
         'ephem_triage_done': ephem_triage_done,
@@ -338,7 +618,7 @@ def api_triage_save(request):
     tess_id = r.get('tic')
     changes = r.get('changes', {})
     # TODO: remove this (or manually add usernames/permissions) once done with testing
-    #if username not in ['kconroy', 'aprsa', 'andrej', 'TEST-USER']:
+    # if username not in ['kconroy', 'aprsa', 'andrej', 'TEST-USER']:
     #    return JsonResponse({'success': False, 'msg': 'not authorized to save changes (please report this if you think you should have permissions)', 'username': username})
     if tess_id is None:
         return JsonResponse({'success': False, 'msg': 'tess_id not provided', 'username': username})
@@ -408,14 +688,14 @@ def api_data_lc(request, tess_id):
 
 def api_data_periodogram(request, tess_id):
     # TODO: optimize this by downsampling the original files so we can just load and serve
-    freq, lsamp, lsfap = np.loadtxt('spds_ascii/tic%010d.norm.lc.ls' % (tess_id), unpack=True)
+    freq, lsamp, lsfap = np.loadtxt('catalog/static/catalog/spd_data/tic%010d.ls.spd' % (tess_id), unpack=True)
 
     # distance may need to be changed if the input is downsampled, its in units of the freq step
     peaks_inds, props = find_peaks(lsamp, height=0.001, distance=10)
     peaks_amps = lsamp[peaks_inds]
     peaks_inds_sorted = peaks_inds[peaks_amps.argsort()][::-1]
     peak_periods = 1./freq[peaks_inds_sorted]
-    #peak_periods = np.linspace(0.1, 10, 101).tolist()
+    # peak_periods = np.linspace(0.1, 10, 101).tolist()
 
     # downsample if file is over 80k lines
     if len(freq) > 80000:
@@ -424,4 +704,3 @@ def api_data_periodogram(request, tess_id):
     periods = 1./freq
 
     return JsonResponse({'periods': periods.tolist(), 'powers': lsamp.tolist(), 'peak_periods': peak_periods.tolist()})
-

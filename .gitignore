@@ -1,10 +1,13 @@
 # Private files
 tessEBs/private.py
 
+# Local files:
+tessEBs/local
+
 # Static files
-static/catalog/lc_data/
-static/catalog/lc_figs/
-static/catalog/triage/
+mastDownload/
+static/catalog/
+catalog/static/catalog/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

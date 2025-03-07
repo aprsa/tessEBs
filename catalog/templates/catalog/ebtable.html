@@ -22,55 +22,57 @@
 <table>
     <thead>
         <tr>
-            {% if 'in_catalog' in fields %}    <th>In catalog</th>          {% endif %}
-            {% if 'tic__tess_id' in fields %}  <th>TESS ID</th>             {% endif %}
-            {% if 'date_added' in fields %}    <th>Date added</th>          {% endif %}
-            {% if 'date_modified' in fields %} <th>Last update</th>         {% endif %}
-            {% if 'sectors' in fields %}       <th>Sectors</th>             {% endif %}
-            {% if 'tic__ra' in fields %}       <th>R.A.</th>                {% endif %}
-            {% if 'tic__dec' in fields %}      <th>Dec</th>                 {% endif %}
-            {% if 'tic__Tmag' in fields %}     <th>Tmag</th>                {% endif %}
-            {% if 'tic__glon' in fields %}     <th>Gal. longitude</th>      {% endif %}
-            {% if 'tic__glat' in fields %}     <th>Gal. latitude</th>       {% endif %}
-            {% if 'tic__pmra' in fields %}     <th>PM in R.A. [mas/yr]</th> {% endif %}
-            {% if 'tic__pmdec' in fields %}    <th>PM in Dec [mas/yr]</th>  {% endif %}
-            {% if 'bjd0' in fields %}          <th>t0 [BJD]</th>            {% endif %}
-            {% if 'bjd0_uncert' in fields %}   <th>&sigma;(t0) [BJD]</th>   {% endif %}
-            {% if 'period' in fields %}        <th>P0 [days]</th>           {% endif %}
-            {% if 'period_uncert' in fields %} <th>&sigma;(P0) [days]</th>  {% endif %}
-            {% if 'morph_coeff' in fields %}   <th>Morphology</th>          {% endif %}
-            {% if 'tic__teff' in fields %}     <th>Teff</th>                {% endif %}
-            {% if 'tic__logg' in fields %}     <th>log(g)</th>              {% endif %}
-            {% if 'tic__abun' in fields %}     <th>[M/H]</th>               {% endif %}
-            {% if 'source' in fields %}        <th>Source</th>              {% endif %}
-            {% if 'flags' in fields %}         <th>Flags</th>               {% endif %}
+            {% if 'in_catalog' in fields %}       <th>In catalog</th>          {% endif %}
+            {% if 'tic__tess_id' in fields %}     <th>TESS ID</th>             {% endif %}
+            {% if 'date_added' in fields %}       <th>Date added</th>          {% endif %}
+            {% if 'date_modified' in fields %}    <th>Last update</th>         {% endif %}
+            {% if 'sectors' in fields %}          <th>Sectors</th>             {% endif %}
+            {% if 'tic__provenances' in fields %} <th>Provenances</th>         {% endif %}
+            {% if 'tic__ra' in fields %}          <th>R.A.</th>                {% endif %}
+            {% if 'tic__dec' in fields %}         <th>Dec</th>                 {% endif %}
+            {% if 'tic__Tmag' in fields %}        <th>Tmag</th>                {% endif %}
+            {% if 'tic__glon' in fields %}        <th>Gal. longitude</th>      {% endif %}
+            {% if 'tic__glat' in fields %}        <th>Gal. latitude</th>       {% endif %}
+            {% if 'tic__pmra' in fields %}        <th>PM in R.A. [mas/yr]</th> {% endif %}
+            {% if 'tic__pmdec' in fields %}       <th>PM in Dec [mas/yr]</th>  {% endif %}
+            {% if 'bjd0' in fields %}             <th>t0 [BJD]</th>            {% endif %}
+            {% if 'bjd0_uncert' in fields %}      <th>&sigma;(t0) [BJD]</th>   {% endif %}
+            {% if 'period' in fields %}           <th>P0 [days]</th>           {% endif %}
+            {% if 'period_uncert' in fields %}    <th>&sigma;(P0) [days]</th>  {% endif %}
+            {% if 'morph_coeff' in fields %}      <th>Morphology</th>          {% endif %}
+            {% if 'tic__teff' in fields %}        <th>Teff</th>                {% endif %}
+            {% if 'tic__logg' in fields %}        <th>log(g)</th>              {% endif %}
+            {% if 'tic__abun' in fields %}        <th>[M/H]</th>               {% endif %}
+            {% if 'source' in fields %}           <th>Source</th>              {% endif %}
+            {% if 'flags' in fields %}            <th>Flags</th>               {% endif %}
         </tr>
     </thead>
 
     <tbody>
         {% for eb in ebs %}
             <tr>
-                {% if 'in_catalog' in fields %}   <td> {{eb.in_catalog}} </td> {% endif %}
-                {% if 'tic__tess_id' in fields %} <td> <a href="{{eb.tic.tess_id|stringformat:"010d"}}"> {{eb.tic.tess_id|stringformat:"010d"}} </a></td> {% endif %}
-                {% if 'date_added' in fields %} <td> {{ eb.date_added }} </td> {% endif %}
-                {% if 'date_modified' in fields %} <td> {{ eb.date_modified }} </td> {% endif %}
-                {% if 'sectors' in fields %} <td> {{ eb.sectors.all|join:", " }} </td> {% endif %}
-                {% if 'tic__ra' in fields %} <td> {{ eb.tic.ra|stringformat:"6.6f" }} </td> {% endif %}
-                {% if 'tic__dec' in fields %} <td> {{ eb.tic.dec|stringformat:"6.6f" }} </td> {% endif %}
-                {% if 'tic__Tmag' in fields %} <td> {{ eb.tic.Tmag|stringformat:"2.2f" }} </td> {% endif %}
-                {% if 'tic__glon' in fields %} <td> {{ eb.tic.glon|stringformat:"6.6f" }} </td> {% endif %}
-                {% if 'tic__glat' in fields %} <td> {{ eb.tic.glat|stringformat:"6.6f" }} </td> {% endif %}
-                {% if 'tic__pmra' in fields %} <td> {{ eb.tic.pmra }} </td> {% endif %}
-                {% if 'tic__pmdec' in fields %} <td> {{ eb.tic.pmdec }} </td> {% endif %}
-                {% if 'bjd0' in fields %} <td> {{ eb.bjd0|floatformat:6 }} </td> {% endif %}
-                {% if 'bjd0_uncert' in fields %} <td> {{ eb.bjd0_uncert|floatformat:6 }} </td> {% endif %}
-                {% if 'period' in fields %} <td> {{ eb.period|floatformat:7 }} </td> {% endif %}
-                {% if 'period_uncert' in fields %} <td> {{ eb.period_uncert|floatformat:7 }} </td> {% endif %}
-                {% if 'morph_coeff' in fields %} <td> {{ eb.morph_coeff|floatformat:3 }} </td> {% endif %}
-                {% if 'tic__teff' in fields %} <td> {{ eb.tic.teff|stringformat:"0.0f" }} </td> {% endif %}
-                {% if 'tic__logg' in fields %} <td> {{ eb.tic.logg|stringformat:"2.2f" }} </td> {% endif %}
-                {% if 'tic__abun' in fields %} <td> {{ eb.tic.abun|stringformat:"2.2f" }} </td> {% endif %}
-                {% if 'source' in fields %} <td> {{ eb.source }} </td> {% endif %}
+                {% if 'in_catalog' in fields %}       <td> {{eb.in_catalog}} </td> {% endif %}
+                {% if 'tic__tess_id' in fields %}     <td> <a href="{{eb.tic.tess_id|stringformat:"010d"}}"> {{eb.tic.tess_id|stringformat:"010d"}} </a></td> {% endif %}
+                {% if 'date_added' in fields %}       <td> {{ eb.date_added }} </td> {% endif %}
+                {% if 'date_modified' in fields %}    <td> {{ eb.date_modified }} </td> {% endif %}
+                {% if 'sectors' in fields %}          <td> {{ eb.tic.sectors.all|join:", " }} </td> {% endif %}
+                {% if 'tic__provenances' in fields %} <td> {{ eb.tic.provenances.all|join:", " }} </td> {% endif %}
+                {% if 'tic__ra' in fields %}          <td> {{ eb.tic.ra|stringformat:"6.6f" }} </td> {% endif %}
+                {% if 'tic__dec' in fields %}         <td> {{ eb.tic.dec|stringformat:"6.6f" }} </td> {% endif %}
+                {% if 'tic__Tmag' in fields %}        <td> {{ eb.tic.Tmag|stringformat:"2.2f" }} </td> {% endif %}
+                {% if 'tic__glon' in fields %}        <td> {{ eb.tic.glon|stringformat:"6.6f" }} </td> {% endif %}
+                {% if 'tic__glat' in fields %}        <td> {{ eb.tic.glat|stringformat:"6.6f" }} </td> {% endif %}
+                {% if 'tic__pmra' in fields %}        <td> {{ eb.tic.pmra }} </td> {% endif %}
+                {% if 'tic__pmdec' in fields %}       <td> {{ eb.tic.pmdec }} </td> {% endif %}
+                {% if 'bjd0' in fields %}             <td> {{ eb.ephemeris.bjd0|floatformat:6 }} </td> {% endif %}
+                {% if 'bjd0_uncert' in fields %}      <td> {{ eb.ephemeris.bjd0_uncert|floatformat:6 }} </td> {% endif %}
+                {% if 'period' in fields %}           <td> {{ eb.ephemeris.period|floatformat:7 }} </td> {% endif %}
+                {% if 'period_uncert' in fields %}    <td> {{ eb.ephemeris.period_uncert|floatformat:7 }} </td> {% endif %}
+                {% if 'morph_coeff' in fields %}      <td> {{ eb.morph_coeff|floatformat:3 }} </td> {% endif %}
+                {% if 'tic__teff' in fields %}        <td> {{ eb.tic.teff|stringformat:"0.0f" }} </td> {% endif %}
+                {% if 'tic__logg' in fields %}        <td> {{ eb.tic.logg|stringformat:"2.2f" }} </td> {% endif %}
+                {% if 'tic__abun' in fields %}        <td> {{ eb.tic.abun|stringformat:"2.2f" }} </td> {% endif %}
+                {% if 'source' in fields %}           <td> {{ eb.source }} </td> {% endif %}
                 {% if 'flags' in fields %}
                 <td>
                     {% if eb.ambiguous %}    <div class="tooltip">A<span class="tooltiptext">Ambiguous</span></div> {% endif %}

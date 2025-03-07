@@ -2,9 +2,12 @@
 
 <html lang="en">
 
+{% load static %}
+
 <head>
     <meta charset="utf-8">
     <title> {% block title %}TESS EB catalog{% endblock %} </title>
+    <link rel="stylesheet" href="{% static 'catalog/styles.css' %}">
     <style>
         table {width: 100%; text-align: left; border-collapse: collapse;}
         th {text-align: left; background-color: #2b71b1; color: white; padding: 8px}
@@ -13,7 +16,7 @@
         th a:visited {color: white;}
         th a:active {color: white;}
         td {border: 1px solid #ddd; padding: 8px}
-        .tooltip {position: relative; display: inline-block; border-bottom: 1px dotted black;}
+        .tooltip {position: relative; display: inline-block; border-bottom: none;}
         .tooltip .tooltiptext {visibility: hidden; width: 100px; background-color: #555; color: white; text-align: center; padding: 5px 0; border-radius: 6px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -20px; opacity: 0; transition: opacity 0.3s;}
         .tooltip .tooltiptext::after {content: ""; position: absolute; top: 100%; left: 30%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #555 transparent transparent transparent;}
         .tooltip:hover .tooltiptext {visibility: visible; opacity: 1;}
@@ -30,33 +33,71 @@
             display: inline-block;
             vertical-align: middle;
         }
-        #bggrad {
-            height: 100%;
-            background-color: #2b71b1;
-            background-image: linear-gradient(#2b71b1, #95b8d8)
+        .refresh-button {
+            background-color: aliceblue;
+            border: black 1px solid;
+            background-image: url("static/icons/refresh.svg");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 15px;
         }
-        .alignment {
-            position: absolute;
-            top: 16px;
-            right: 16px;
+        .syndicate-button {
+            background-color: aliceblue;
+            border: black 1px solid;
+            background-image: url("static/icons/download.svg");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 20px;
+        }
+        .ephem-button {
+            background-color: aliceblue;
+            border: black 1px solid;
+            background-image: url("static/icons/plot.svg");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 22px;
+        }
+        .triage-button {
+            background-color: aliceblue;
+            border: black 1px solid;
+            background-image: url("static/icons/triage.svg");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 15px;
+        }
+        .admin-button {
+            background-color: aliceblue;
+            border: black 1px solid;
+            background-image: url("static/icons/settings.svg");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 15px;
         }
     </style>
+    {% block extra_header %}{% endblock %}
 </head>
-
-{% load static %}
 
 <body>
 
 {% block navigation %}
     <div class="container">
-        <div id="bggrad">
-            <img src="{% static 'catalog/banner.png' %}" style="width:100%;">
-            <div class="alignment">
+        <div class="banner">
+            <div class="logo">
+                <img src="{% static 'catalog/logo.png' %}">
+            </div>
+            <div class="banner-title">
+                Live version of the TESS EB catalog
+            </div>
+            <div class="banner-buttons">
                 {% if user.is_authenticated %}
                     <button onclick="location.href='/'">Home</button>
                     <button onclick="location.href='search'">Search</button>
                     <button onclick="location.href='triage'">Triage</button>
-                    <button onclick="location.href='accounts/logout'">Logout</button>
+                    <form method="post" action="accounts/logout/" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit">Logout</button>
+                    </form>
+                    <!-- <button onclick="location.href='accounts/logout/'">Logout</button> -->
                 {% else %}
                     <button onclick="location.href='/'">Home</button>
                     <button onclick="location.href='search'">Search</button>

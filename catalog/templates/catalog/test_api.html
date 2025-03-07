@@ -1,0 +1,19 @@
+{% extends "catalog/base.html" %}
+
+{% block title %} TESS EB search form {% endblock %}
+
+{% block content %}
+<h1> API test frontend </h1>
+
+{% if user.is_authenticated %}
+    <form action="api/test" method="post">
+        {% csrf_token %}
+        <button type="submit">Test connection</button>
+    </form>
+
+    <br>
+{% else %}
+    Please authenticate first in order to use the API.
+{% endif %}
+
+{% endblock %}

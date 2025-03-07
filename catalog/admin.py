@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TIC, EB, Origin, Sector, EphemerisSource, Ephemeris, Comment
+from .models import TIC, EB, Origin, Sector, Provenance, EphemerisSource, Ephemeris, Comment, BLS_run
 
 #class EBAdmin(admin.ModelAdmin):
 #    model = EB
@@ -27,7 +27,9 @@ class EBAdmin(admin.ModelAdmin):
 admin.site.register(TIC, TICAdmin)
 admin.site.register(EB, EBAdmin)
 admin.site.register(Sector)
+admin.site.register(Provenance)
 admin.site.register(Origin)
 admin.site.register(EphemerisSource)
 admin.site.register(Ephemeris)
 admin.site.register(Comment)
+admin.site.register(BLS_run)
