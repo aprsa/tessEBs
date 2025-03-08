@@ -19,7 +19,7 @@
 
 {% load static %}
 
-    <table>
+    <table class="details-table">
         <thead>
             <th><div class="tooltip">&alpha; [<sup>o</sup>]<span class="tooltiptext">Right ascension</span></div></th>
             <th><div class="tooltip">&delta; [<sup>o</sup>]<span class="tooltiptext">Declination</span></div></th>
@@ -116,7 +116,7 @@
 
     {% if list_of_ebs %}
 
-    <table>
+    <table class="details-table">
         <thead>
             <th><div class="tooltip">Signal<span class="tooltiptext">TIC signal ID</span></div></th>
             <th><div class="tooltip">In catalog?<span class="tooltiptext">Is this signal in the EB catalog?</span></div></th>
@@ -143,7 +143,7 @@
 
     <br>
 
-    <table>
+    <table class="details-table">
         <thead>
             <th><div class="tooltip">w<sub>p,pf</sub><span class="tooltiptext">Polyfit width of the primary eclipse</span></div></th>
             <th><div class="tooltip">w<sub>s,pf</sub><span class="tooltiptext">Polyfit width of the secondary eclipse</span></div></th>
