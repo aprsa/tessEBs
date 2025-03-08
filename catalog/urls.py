@@ -20,6 +20,8 @@ urlpatterns = [
     path('add_tic/<int:tess_id>', views.AddTICView.as_view(), name='add_tic'),
     path('add_tic', views.AddTICView.as_view(), name='add_tic'),
     path('triage/<int:tess_id>', views.TriageView.as_view(), name='triage'),
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('accounts/profile/', views.profile, name='profile'),
 
     # api testing frontend:
     path('test_api', views.TestApiView.as_view(), name='test_frontend'),
@@ -39,8 +41,6 @@ urlpatterns = [
     # path('api/triage/user/<str:username>', views.api_triage_user),
     # path('api/data/lc/<int:tess_id>', views.api_data_lc),
     # path('api/data/periodogram/<int:tess_id>', views.api_data_periodogram),
-    # path('accounts/', include('django.contrib.auth.urls')),
-    path('accounts/profile/', views.profile, name='profile'),
     # path('triage', views.react_triage),
     # path('triage/<int:tess_id>', views.react_triage),
     # path('triage_done', TemplateView.as_view(template_name='static/triage_done.html'), name='triage_done'),
