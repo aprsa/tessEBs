@@ -1,0 +1,222 @@
+/* Generic buttons */
+
+button, input[type=submit] {
+    background-color: #7593c0;
+    border: 1px solid white;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #4d6f9c;
+}
+
+button:active {
+    transform: translate(1px, 1px);
+}
+
+/* Generic inputs, selections and labels: */
+
+input[type=text], input[type=number], input[type=checkbox], select {
+    padding: 5px 20px 5px 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+label, select {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Specific buttons: */
+.refresh-button {
+    background-color: aliceblue;
+    border: black 1px solid;
+    background-image: url("../icons/refresh.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px;
+}
+.syndicate-button {
+    background-color: aliceblue;
+    border: black 1px solid;
+    background-image: url("../icons/download.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20px;
+}
+.ephem-button {
+    background-color: aliceblue;
+    border: black 1px solid;
+    background-image: url("../icons/plot.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 22px;
+}
+.triage-button {
+    background-color: aliceblue;
+    border: black 1px solid;
+    background-image: url("../icons/triage.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px;
+}
+.admin-button {
+    background-color: aliceblue;
+    border: black 1px solid;
+    background-image: url("../icons/settings.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px;
+}
+
+/* Specific tables: */
+.catalog-table, .details-table {
+    border-collapse: collapse;
+    text-align: left;
+    column-rule-style: hidden;
+    width: 100%;
+}
+
+.catalog-table th, .details-table th {
+    text-align: left;
+    background-color: #2b71b1;
+    color: white;
+    padding: 8px
+}
+.catalog-table th a, .details-table th a {
+    color: white;
+    text-decoration: none;
+}
+.catalog-table th a:hover, .details-table th a:hover {
+    color: white;
+}
+.catalog-table th a:visited, .details-table th a:visited {
+    color: white;
+}
+.catalog-table th a:active, .details-table th a:active {
+    color: white;
+}
+.catalog-table td, .details-table td {
+    border: 1px solid #ddd;
+    padding: 8px
+}
+
+/* Hover tooltips: */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: none;
+    cursor: help;
+}
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    margin-left: -30px;
+    background-color: #94b7d7;
+    color: white;
+    border: 1px solid #bbbbbb;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    opacity: 0;
+    will-change: opacity;
+    transition: opacity 0.6s;
+}
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 30%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: white transparent transparent transparent;
+}
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+input[type=number], input[type=text] {
+    padding: 5px 20px 5px 20px;
+    border: 1px solid #ccc;
+    background-color: white;
+    border-radius: 4px;
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    width: 200px;
+    height: 25px;
+}
+
+.banner {
+    height: 200px;
+    background: linear-gradient(to bottom, #4d6f9c, #94b7d7);
+}
+
+.banner-title {
+    position: absolute;
+    top: 130px;
+    right: 40px;
+    overflow-x: hidden;
+    white-space: nowrap;
+    color: white;
+    text-shadow: #4d6f9c 5px 5px 5px;
+    font-size: 48px;
+}
+
+.banner-buttons {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+.logo {
+    position: absolute;
+    top: 25px;
+}
+
+.parameter_grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-gap: 10px;
+    margin: 10px;
+}
+
+.parameter {
+    border: 1px #4d6f9c solid;
+    border-radius: 4px;
+    background-color: aliceblue;
+    padding: 10px;
+    margin: 6px;
+    display:inline-block;
+}
+
+.mast_query_table {
+    /* background-color: #f0f8ff; */
+    border-collapse: collapse;
+    column-rule-style: hidden;
+    column-rule: 0cm;
+    width: 800px;
+}
+
+.mast_query_table td {
+    border: none;
+}
