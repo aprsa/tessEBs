@@ -43,7 +43,7 @@ def download_meta(tess_id):
 
     other_ids = simbad.query_objectids(f'TIC {tess_id}')
     if other_ids is not None:
-        for other_id in other_ids['ID']:
+        for other_id in other_ids['id']:
             asas_id = other_id.split(' ')[1] if 'ASAS' in other_id else None
             kepler_id = other_id.split(' ')[1] if 'Kepler' in other_id else None
             gaia_dr3_id = other_id.split(' ')[2] if 'DR3' in other_id else None
@@ -75,7 +75,7 @@ def download_meta(tess_id):
         'provenances': provenances,
     }
 
-    # convert numpy types to native for json serialization:    
+    # convert numpy types to native for json serialization:
     for key, value in meta.items():
         if isinstance(value, np.generic):
             meta[key] = value.item()

@@ -67,13 +67,20 @@ class DetailsView(TemplateView):
         signal_id = context.get('signal_id', 1)
         context['signal_id'] = signal_id
 
-        tic = TIC.objects.get(tess_id=tess_id)
+        try:
+            tic = TIC.objects.get(tess_id=tess_id)
+        except TIC.DoesNotExist:
+            tic = None
+
         context['tic'] = tic
         context['list_of_ebs'] = EB.objects.filter(tic__tess_id=tess_id)
 
-        # check if the syndicated fits file exists:
-        fits_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_data', f'tic{tess_id:010d}.fits')
-        context['data_exist'] = os.path.exists(fits_file)
+        if tic is not None:
+            # check if the syndicated fits file exists:
+            fits_file = os.path.join(settings.BASE_DIR, 'static', 'catalog', 'lc_data', f'tic{tess_id:010d}.fits')
+            context['data_exist'] = os.path.exists(fits_file)
+        else:
+            context['data_exist'] = False
 
         return context
 
