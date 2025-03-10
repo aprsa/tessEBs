@@ -1,0 +1,49 @@
+version: '3.7'
+
+services:
+  mariadb:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootaccess
+      MYSQL_DATABASE: tessEBs
+      MYSQL_USER: webadmin
+      MYSQL_PASSWORD: webadmin
+    command: --max_allowed_packet=32505856
+    container_name: tessEBs_db
+    restart: always
+    volumes:
+      - ./tessEBs.20250307.sql:/docker-entrypoint-initdb.d/dbimport.sql
+      - ./dbdata:/var/lib/mysql
+      - /tmp/tessEBs/mysqld:/var/run/mysqld
+    healthcheck:
+      test: ["CMD", "mariadb", "-h", "localhost", "-uwebadmin", "-pwebadmin", "-e", "use", "tessEBs"]
+      timeout: 10s
+      retries: 10
+    ports:
+      - "3305:3306"
+
+  django:
+    container_name: tessEBs_django
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    volumes:
+      - ./catalog:/srv/www/tessEBs/catalog
+      - ./tessEBs:/srv/www/tessEBs/tessEBs
+      - ./static:/srv/www/tessEBs/static
+      - /tmp/tessEBs/mysqld:/var/run/mysqld
+    working_dir: /srv/www/tessEBs
+    command: sh -c "uwsgi --http :8080 --wsgi-file tessEBs/wsgi.py --master --processes 4 --threads 2 --static-map2 /static=/srv/www/tessEBs"
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      DJANGO_SETTINGS_MODULE: tessEBs.settings
+      PYTHONUNBUFFERED: 1
+      DEBUG: 0
+      ALLOWED_HOSTS: localhost 127.0.0.1 [::1]
+volumes:
+  dbdata:

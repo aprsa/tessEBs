@@ -3,9 +3,14 @@ tessEBs/private.py
 
 # Local files:
 tessEBs/local
+deps
+.vscode/
+backups/
+
+# Docker files:
+dbdata/
 
 # Static files
-mastDownload/
 static/catalog/
 catalog/static/catalog/
 
