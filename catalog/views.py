@@ -445,9 +445,7 @@ class ApiTicAddView(View):
                     'error': 'tess_id not provided'
                 }, status=400)
 
-            tic = TIC.from_mast(int(tess_id), syndicate_data=False, create_static=False)
-            tic.save()
-
+            TIC.from_mast(int(tess_id), syndicate_data=False, create_static=False)
             return redirect(request.META.get('HTTP_REFERER'))
             # comment out above and uncomment below to debug
             # return JsonResponse({
