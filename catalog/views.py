@@ -15,11 +15,15 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
+from django.contrib.auth import logout
+from django.urls import reverse_lazy
 
 from csv_export.views import CSVExportView
 
 from django.views.generic import View, TemplateView, ListView
 from django.views.generic.detail import BaseDetailView
+from django.contrib.auth.views import LogoutView, PasswordChangeView, PasswordResetView
+from django.contrib.auth.forms import PasswordChangeForm, PasswordResetForm
 
 from . import backend
 from . import pipeline as pl
@@ -309,6 +313,26 @@ class TriageView(TemplateView):
             context['plots'][provenance.name]['ph'] = f'catalog/lc_figs/{os.path.basename(ph_file)}' if os.path.exists(ph_file) else None
 
         return context
+
+
+class ChangePasswordView(PasswordChangeView):
+    form_class = PasswordChangeForm
+    success_url = reverse_lazy('profile')
+    template_name = 'registration/change_password.html'
+
+
+class ResetPasswordView(PasswordResetView):
+    form_class = PasswordResetForm
+    success_url = reverse_lazy('login')
+    template_name = 'registration/reset_password.html'
+
+
+class GoodbyeView(LogoutView):
+    template_name = 'registration/goodbye.html'
+
+    def post(self, request):
+        logout(request)
+        return render(request, 'registration/goodbye.html')
 
 
 class TestApiView(TemplateView):

@@ -22,6 +22,9 @@ urlpatterns = [
     path('triage/<int:tess_id>', views.TriageView.as_view(), name='triage'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/profile/', views.profile, name='profile'),
+    path('goodbye/', views.GoodbyeView.as_view(), name='goodbye'),
+    path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
+    path('reset-password/', views.ResetPasswordView.as_view(), name='reset_password'),
 
     # api testing frontend:
     path('test_api', views.TestApiView.as_view(), name='test_frontend'),
