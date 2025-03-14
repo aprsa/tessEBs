@@ -113,6 +113,20 @@ label, select {
     padding: 8px
 }
 
+.login-table input[type="text"],
+.login-table input[type="password"] {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 200px;
+    font-size: 14px;
+    line-height: 1.5;
+    height: auto;
+    margin: 0;
+    display: block;
+    box-sizing: border-box;
+}
+
 /* Hover tooltips: */
 .tooltip {
     position: relative;
