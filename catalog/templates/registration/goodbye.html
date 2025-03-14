@@ -1,0 +1,14 @@
+{% extends "catalog/base.html" %}
+{% load static %}
+
+{% block title %} Logout successful! {% endblock %}
+
+{% block content %}
+
+Thanks for spending some quality time on tessEBs today! <br>
+You have been successfully logged out. <br><br>
+
+<button onclick="location.href='{% url 'login' %}'" class="btn btn-primary">Log in again</button>
+<button onclick="location.href='{% url 'main' %}'" class="btn btn-secondary">Return to Home</button>
+
+{% endblock %}
