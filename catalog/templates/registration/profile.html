@@ -8,12 +8,13 @@
     <h1> Profile management </h1>
 
     Hello, {{ user }}! What would you like to do? <br><br>
-    <a href="/">Go to main page</a><br>
-    <a href="triage">Go to triage page</a><br>
-    <a href="accounts/password_change">Change password</a><br>
-    <a href="password_reset">Reset password</a><br>
-    <a href="logout">Logout</a><br>
-
+    <button onclick="location.href='/'">Go to main page</button>
+    <button onclick="location.href='{% url "change_password" %}'">Change password</button>
+    <button onclick="location.href='{% url "reset_password" %}'">Reset password</button>
+    <form method="post" action="{% url 'goodbye' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
     <br>
 {% else %}
     Please authenticate first in order to access your profile area.
