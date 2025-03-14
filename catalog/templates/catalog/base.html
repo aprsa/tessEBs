@@ -26,12 +26,11 @@
                 {% if user.is_authenticated %}
                     <button onclick="location.href='/'">Home</button>
                     <button onclick="location.href='search'">Search</button>
-                    <button onclick="location.href='triage'">Triage</button>
-                    <form method="post" action="/accounts/logout/" style="display: inline;">
+                    <button onclick="location.href='/accounts/profile'">Profile</button>
+                    <form method="post" action="{% url 'goodbye' %}" style="display: inline;">
                         {% csrf_token %}
                         <button type="submit">Logout</button>
                     </form>
-                    <!-- <button onclick="location.href='accounts/logout/'">Logout</button> -->
                 {% else %}
                     <button onclick="location.href='/'">Home</button>
                     <button onclick="location.href='search'">Search</button>
