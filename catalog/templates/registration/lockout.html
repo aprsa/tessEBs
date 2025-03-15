@@ -1,0 +1,16 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %} Locked out! {% endblock %}
+
+{% block content %}
+    <h2>You have been locked out</h2>
+
+    Your username, {{ username }}, has been locked out of the tessEBs portal due to
+    {{ failure_limit }} failed attempts to log in. Your access will be reinstated in
+    {{ cooloff_time }} hours.<br><br>
+
+    This measure is necessary to prevent brute-force attacks against the server.<br><br>
+
+    Please note that any additional attempts during the cooloff period will reset the
+    time remaining to the full cooloff period.
+{% endblock %}

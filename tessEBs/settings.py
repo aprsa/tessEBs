@@ -38,8 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'corsheaders',  # needed to allow testing react from localhost
     'catalog.apps.CatalogConfig',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -50,18 +50,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'corsheaders.middleware.CorsMiddleware', # needed to allow testing react from localhost
+    'axes.middleware.AxesMiddleware',
 ]
-
-# CORS_ORIGIN_ALLOW_ALL = False
-# CORS_ORIGIN_WHITELIST = (
-#     'http://localhost:3000',
-# )
-# CORS_ALLOW_METHODS = (
-#     'GET',
-#     'POST',
-# )
-# CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'tessEBs.urls'
 
@@ -83,6 +73,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'tessEBs.wsgi.application'
 
+# BRUTE-FORCE PROTECTION
+AXES_ENABLED = 1
+AXES_ENABLE_ADMIN = True
+AXES_IPWARE_PROXY_COUNT = 1
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 2
+AXES_LOCKOUT_TEMPLATE = 'registration/lockout.html'
+AXES_RESET_ON_SUCCESS = True
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
@@ -95,6 +93,11 @@ DATABASES = {
         'PASSWORD': PASSWORD,
     }
 }
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators

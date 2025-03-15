@@ -12,7 +12,7 @@ RUN pip install --upgrade pip
 RUN pip install numpy scipy matplotlib astropy astroquery
 
 # Install django stuff:
-RUN pip install django django-cors-headers django-csv-export-view mysqlclient uwsgi
+RUN pip install django django-csv-export-view django-axes mysqlclient uwsgi
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

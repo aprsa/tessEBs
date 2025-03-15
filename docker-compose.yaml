@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   mariadb:
     image: mariadb
@@ -12,7 +10,7 @@ services:
     container_name: tessEBs_db
     restart: always
     volumes:
-      - ./tessEBs.20250307.sql:/docker-entrypoint-initdb.d/dbimport.sql
+      - ./tessEBs.20250311.sql:/docker-entrypoint-initdb.d/dbimport.sql
       - ./dbdata:/var/lib/mysql
       - /tmp/tessEBs/mysqld:/var/run/mysqld
     healthcheck:
