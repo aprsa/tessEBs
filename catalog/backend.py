@@ -63,7 +63,9 @@ def download_meta(tess_id):
                 gaia_dr3_id = other_id.split(' ')[2]
 
     sectors = [int(s) for s in tc.get_sectors(objectname=f'TIC {tess_id}')['sector'].data]
-    provenances = [str(provenance) for provenance in set(obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name'])]
+    provenances = [
+        str(provenance) for provenance in set(obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name'])
+    ]
 
     meta = {
         'status': 'success',
