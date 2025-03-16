@@ -155,20 +155,19 @@ class TIC(models.Model):
             tic.provenances.add(prov)
 
         # download data if requested:
-        tic.download = kwargs.get('syndicate_data', True)
-        overwrite = kwargs.get('overwrite_static_files', False)
-        if tic.download:
-            tic.syndicate_data(force_overwrite=overwrite)
+        if kwargs.get('syndicate_data', True):
+            force_overwrite = kwargs.get('overwrite_static_files', False)
+            tic.download_data()
+            tic.syndicate_data(force_overwrite=force_overwrite)
 
         # create static files if requested:
-        tic.create_static = kwargs.get('create_static', True)
-
-        if tic.create_static:
-            tic.create_static_files(force_overwrite=overwrite)
+        if kwargs.get('create_static', False):
+            force_overwrite = kwargs.get('overwrite_static_files', True)
+            tic.create_static_files(force_overwrite=force_overwrite)
 
         return tic
 
-    def download_data(self, dest_dir=None, **kwargs):
+    def download_data(self, dest_dir='static/catalog', **kwargs):
         return backend.download_data(tess_id=self.tess_id, dest_dir=dest_dir, **kwargs)
 
     def syndicate_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
