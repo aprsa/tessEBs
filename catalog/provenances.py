@@ -130,8 +130,8 @@ class SPOCProvenance(Provenance):
     }
     cols = {
         'time': 'TIME',
-        'flux': 'PDCSAP_FLUX',
-        'ferr': 'PDCSAP_FLUX_ERR',
+        'flux': 'SAP_FLUX',
+        'ferr': 'SAP_FLUX_ERR',
         'flag': 'QUALITY'
     }
 

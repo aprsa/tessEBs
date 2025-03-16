@@ -155,59 +155,23 @@ class TIC(models.Model):
             tic.provenances.add(prov)
 
         # download data if requested:
-        tic.download = kwargs.get('syndicate_data', True)
-        overwrite = kwargs.get('overwrite_static_files', False)
-        if tic.download:
-            tic.syndicate_data(force_overwrite=overwrite)
+        if kwargs.get('syndicate_data', True):
+            force_overwrite = kwargs.get('overwrite_static_files', False)
+            tic.download_data()
+            tic.syndicate_data(force_overwrite=force_overwrite)
 
         # create static files if requested:
-        tic.create_static = kwargs.get('create_static', True)
-
-        if tic.create_static:
-            tic.create_static_files(force_overwrite=overwrite)
+        if kwargs.get('create_static', False):
+            force_overwrite = kwargs.get('overwrite_static_files', True)
+            tic.create_static_files(force_overwrite=force_overwrite)
 
         return tic
 
-    def update_provenances(self):
-        """
-        Update available provenances from MAST.
-
-        The method assumes that the TIC instance is already in the database
-        and has a valid TESS ID.
-        """
-
-        for pname in set(obs.query_criteria(target_name=self.tess_id, dataproduct_type='timeseries', project='TESS')['provenance_name']):
-            prov, _ = Provenance.objects.get_or_create(name=pname)
-            self.provenances.add(prov)
-
-    def download_data(self, destination=None, **kwargs):
-        # typical kwargs are obs_collection and provenance_name.
-        return download_fits(tess_id=self.tess_id, destination=destination, **kwargs)
+    def download_data(self, dest_dir='static/catalog', **kwargs):
+        return backend.download_data(tess_id=self.tess_id, dest_dir=dest_dir, **kwargs)
 
     def syndicate_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
-        fname = f'{data_dir}/tic{self.tess_id:010d}.fits'
-        if os.path.exists(fname) and not force_overwrite:
-            return fname
-
-        # the method assumes that provenances are up to date.
-        if self.provenances.count() == 0:
-            raise ValueError(f'no provenances found for TIC {self.tess_id:010d}')
-
-        header = fits.Header()
-        header['timestmp'] = time.ctime()  # for versioning purposes
-        header['provs'] = ','.join([prov.name for prov in self.provenances.all()])
-        hdus = [fits.PrimaryHDU(header=header),]
-
-        for provenance in self.provenances.all():
-            provenance = get_provenance(provenance.name)
-            provenance.download(tess_id=self.tess_id)
-            data = provenance.lc(tic=self)
-            lc = np.array(data, dtype=np.float64).T
-            hdus.append(fits.table_to_hdu(Table(lc, names=('times', 'fluxes', 'ferrs'), meta={'extname': provenance.name})))
-
-        fits.HDUList(hdus).writeto(fname, overwrite=True)
-
-        return fname
+        return backend.syndicate_data(self, dest_dir=data_dir, force_overwrite=force_overwrite)
 
     def attach_spds_to_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
         # the method assumes that provenances are up to date.
