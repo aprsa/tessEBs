@@ -1,6 +1,12 @@
+import os
 import numpy as np
+import time
 from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
 from astroquery.simbad import Simbad as simbad
+from astropy.io import fits
+from astropy.table import Table
+
+from . import provenances
 
 
 def download_meta(tess_id):
@@ -85,3 +91,60 @@ def download_meta(tess_id):
             meta[key] = value.item()
 
     return meta
+
+
+def download_data(tess_id, dest_dir='static/catalog', **kwargs):
+    """
+    Download fits files for a given TESS ID.
+
+    Arguments:
+    ----------
+    tess_id: int, required
+        TESS ID of the target.
+    dest_dir: str, optional, default='static/catalog'
+        Destination directory for the downloaded files.
+
+    Keyword arguments:
+    ------------------
+    obs_collection: str
+        Observation collection, 'TESS' or 'HLSP'. By default all collections are downloaded.
+    provenance_name: str
+        Provenance name. By default all provenance names are downloaded.
+
+    Returns:
+    --------
+    list or None
+        List of downloaded files. None if no files were found.
+    """
+
+    data = obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS', **kwargs)
+    if len(data) > 0:
+        return obs.download_products(obs.get_product_list(data), download_dir=dest_dir)
+
+    return None
+
+
+def syndicate_data(tic, dest_dir='static/catalog/lc_data', force_overwrite=False):
+    fname = f'{dest_dir}/tic{tic.tess_id:010d}.fits'
+    if os.path.exists(fname) and not force_overwrite:
+        return fname
+
+    # the method assumes that provenances are up to date.
+    if tic.provenances.count() == 0:
+        raise ValueError(f'no provenances found for TIC {tic.tess_id:010d}')
+
+    header = fits.Header()
+    header['timestmp'] = time.ctime()  # for versioning purposes
+    header['provs'] = ','.join([prov.name for prov in tic.provenances.all()])
+    hdus = [fits.PrimaryHDU(header=header),]
+
+    for provenance in tic.provenances.all():
+        provenance = provenances.get_provenance(provenance.name)
+        provenance.download(tess_id=tic.tess_id)
+        data = provenance.lc(tic=tic)
+        lc = np.array(data, dtype=np.float64).T
+        hdus.append(fits.table_to_hdu(Table(lc, names=('times', 'fluxes', 'ferrs'), meta={'extname': provenance.name})))
+
+    fits.HDUList(hdus).writeto(fname, overwrite=True)
+
+    return fname

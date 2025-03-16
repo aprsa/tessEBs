@@ -7,7 +7,6 @@ import os
 
 from astropy.io import fits
 from astropy.timeseries import BoxLeastSquares as BLS
-from astroquery.mast import Observations as O
 
 from scipy.signal import lombscargle as LS
 from scipy.signal import find_peaks, peak_prominences
@@ -32,24 +31,6 @@ def fits_exists(tess_id):
         return True
     else:
         return False
-
-
-def download_fits(tess_id, destination=None, **kwargs):
-    """
-    Download fits files for a given TESS ID.
-
-    Keyword arguments:
-    ------------------
-    obs_collection: str
-        Observation collection, 'TESS' or 'HLSP'. By default all collections are downloaded.
-    provenance_name: str
-        Provenance name. By default all provenance names are downloaded.
-    """
-
-    data = O.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS', **kwargs)
-    if len(data) > 0:
-        return O.download_products(O.get_product_list(data), download_dir=destination)
-    return None
 
 
 def read_from_path(tess_id, provenance, data_dir=DATADIR, normalize=True, remove_nans=True):
