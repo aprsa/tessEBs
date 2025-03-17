@@ -115,7 +115,7 @@ class TIC(models.Model):
             If True, the method will attach spectral power density data
             to the syndicated data. Note that `syndicate_data` must also
             be set to True.
-        create_static : bool, optional, default True
+        create_static : bool, optional, default False
             If True, the method will create static files for the target.
         static_dir : str, optional, default 'static/catalog'
             The directory where the static files will be stored.
