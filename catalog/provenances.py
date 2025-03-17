@@ -231,7 +231,7 @@ class T16Provenance(Provenance):
     data_filter = {
     }
     cols = {
-        'time': 'TMIS_BJD',
+        'time': 'TMID_BJD',
         'flux': 'IFL1',
         'ferr': 'IFE1',
         'flag': None

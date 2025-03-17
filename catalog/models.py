@@ -126,10 +126,15 @@ class TIC(models.Model):
         Raises
         ------
         ValueError
-            If the sector is not found in the database.
+            If the TIC is not found in the MAST database.
+            If the sector is not found in the internal database.
         """
 
         meta = backend.download_meta(tess_id)
+        status = meta.pop('status')
+        if status != 'success':
+            raise ValueError(f'TIC {tess_id} not found in the MAST database.')
+
         sectors = meta.pop('sectors')
         provenances = meta.pop('provenances')
 
