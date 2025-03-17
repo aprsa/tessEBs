@@ -130,7 +130,10 @@ def download_data(tess_id, dest_dir='static/catalog', **kwargs):
 
     data = obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS', **kwargs)
     if len(data) > 0:
-        return obs.download_products(obs.get_product_list(data), download_dir=dest_dir)
+        products = [product for product in obs.get_product_list(data) if 'lc.fits' in product['productFilename']]
+        if len(products) == 0:
+            return None
+        return obs.download_products(products, download_dir=dest_dir)
 
     return None
 
