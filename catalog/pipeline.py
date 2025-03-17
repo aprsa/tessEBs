@@ -12,18 +12,6 @@ from scipy.signal import lombscargle as LS
 from scipy.signal import find_peaks, peak_prominences
 from scipy.stats import exponweib
 
-DATADIR = '/home/users/andrej/projects/tess/data'
-
-
-def scan_directory(datadir, sector_cap=None):
-    fits_list = np.array(glob.glob('%s/**/*lc.fits' % (datadir), recursive=True), dtype=str)
-    if sector_cap is not None:
-        sectors = np.array([int(f.split('-')[1][1:]) for f in fits_list], dtype=int)
-        fits_list = fits_list[sectors <= sector_cap]
-    if len(fits_list) == 0:
-        print('No fits files found in the %s directory.' % (datadir))
-    return fits_list
-
 
 def fits_exists(tess_id):
     fits_list = glob.glob('%s/**/*%d*lc.fits' % (DATADIR, tess_id), recursive=True)
@@ -33,7 +21,7 @@ def fits_exists(tess_id):
         return False
 
 
-def read_from_path(tess_id, provenance, data_dir=DATADIR, normalize=True, remove_nans=True):
+def read_from_path(tess_id, provenance, data_dir='static/catalog', normalize=True, remove_nans=True):
     times, fluxes, ferrs = provenance.lc(tess_id=tess_id, data_dir=data_dir, normalize=normalize, remove_nans=remove_nans)
     return times, fluxes, ferrs
 
@@ -160,86 +148,3 @@ def run_bls(time, flux, ferr, pmin=0.1, duration=0.05):
     max_power = np.argmax(periodogram.power)
     stats = bls.compute_stats(periodogram.period[max_power], periodogram.duration[max_power], periodogram.transit_time[max_power])
     return periodogram, stats
-
-
-def process_lc(tess_id, signal_id, bjd0=None, period=None):
-    time, flux, flux_err = read_from_fits(tess_id)
-
-    # light curve:
-    plt.title('TIC %010d.%02d   t0=%5.5f   P0=%5.5f' % (tess_id, signal_id, bjd0, period))
-    plt.xlabel('Time')
-    plt.ylabel('Normalized flux')
-    plt.plot(time, flux, 'b.')
-    plt.savefig('lcs/tic%010d.%02d.lc.png' % (tess_id, signal_id))
-    plt.clf()
-
-    # run period finder(s):
-    # lsres = run_lombscargle(time, flux, flux_err, subsample=0.001)
-
-    # plot periodogram(s):
-    # plt.xlabel('Period')
-    # plt.ylabel('LS')
-    # plt.plot(1./lsres['freq'], lsres['ls'], 'b-')
-    # for i in range(3):
-    #     plt.axvline(lsres['periods'][i], ls='--', c='r')
-    # if period is not None:
-    #     plt.axvline(period, ls='-', c='g')
-    # plt.show()
-
-    phase = bjd2phase(time, bjd0=bjd0, period=period)
-
-    plt.title('TIC %010d.%02d   t0=%5.5f   P0=%5.5f' % (tess_id, signal_id, bjd0, period))
-    plt.xlabel('Phase')
-    plt.ylabel('Normalized flux')
-    plt.plot(phase, flux, 'b.')
-    plt.savefig('lcs/tic%010d.%02d.ph.png' % (tess_id, signal_id))
-    plt.clf()
-
-
-def generate_plots(tess_id, prefix, tlc=False, plc=False, spd=False, signal_id=1, bjd0=None, period=None, filelist=None):
-    # if ascii verson of the data exists, load it:
-    norm_lc = f'catalog/static/catalog/lcs/tic{tess_id:010d}.norm.lc'
-    try:
-        time, flux, ferr = np.loadtxt(norm_lc, usecols=(0, 1, 2), unpack=True)
-    except:
-        time, flux, ferr = read_from_all_fits(tess_id, normalize=True, filelist=filelist)
-
-    plt.rcParams.update({'font.family': 'serif', 'font.size': 20})
-    plt.figure(figsize=(16,8))
-
-    if tlc:
-        plt.xlabel('Time [days]')
-        plt.ylabel('Median-normalized flux')
-        plt.plot(time, flux, 'b-')
-        plt.savefig(f'{prefix}/tic{tess_id:010d}.tlc.png')
-
-    if plc and period is not None:
-        plt.clf()
-        if bjd0 is None:
-            bjd0 = 0.0
-        phase = bjd2phase(time, bjd0, period)
-        plt.xlabel('Phase')
-        plt.ylabel('Median-normalized flux')
-        plt.plot(phase, flux, 'b.')
-        plt.plot(phase[phase>=0.4]-1, flux[phase>=0.4], 'b.')
-        plt.plot(phase[phase<=-0.4]+1, flux[phase<=-0.4], 'b.')
-        plt.savefig(f'{prefix}/tic{tess_id:010d}.{signal_id:02d}.plc.png')
-    
-    if spd:
-        try:
-            ls = run_lombscargle(time, flux, ferr, pmin=0.1, pmax=1.2*period, npeaks=1)
-
-            plt.clf()
-            plt.xlabel('Period [days]')
-            plt.ylabel('Spectral power density')
-            plt.plot(1/ls['freq'], ls['ls'], 'b-')
-            plt.axvline(period, ls='--', color='r')
-            plt.savefig(f'{prefix}/tic{tess_id:010d}.{signal_id:02d}.spd.png')
-        except:
-            print(f'SPD computation for TIC {tess_id:010d} failed; appending to failed.log.')
-            with open('failed.log', 'a') as f:
-                f.write(f'{tess_id:010d} SPD\n')
-
-    plt.close()
-
-    return
