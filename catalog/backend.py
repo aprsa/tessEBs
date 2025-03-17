@@ -54,7 +54,16 @@ def download_meta(tess_id):
 
     other_ids = simbad.query_objectids(f'TIC {tess_id}')
     if other_ids is not None:
-        for other_id in other_ids['id']:
+        # it seems that id column can be either 'id' or 'ID',
+        # depending on the version of astroquery. Let's handle that:
+        if 'id' in other_ids.colnames:
+            other_ids = other_ids['id']
+        elif 'ID' in other_ids.colnames:
+            other_ids = other_ids['ID']
+        else:
+            other_ids = []
+
+        for other_id in other_ids:
             if 'ASAS' in other_id:
                 asas_id = other_id.split(' ')[1]
             if 'Kepler' in other_id:

@@ -80,10 +80,13 @@ class Provenance:
                 else:
                     ferrs = data[self.cols['ferr']]
 
-                # flags are either integers or characters:
-                flags = data[self.cols['flag']]
-                if type(data[self.cols['flag']]) is np.char.chararray:
-                    flags = np.array([0 if f == 'G' else -1 for f in flags])
+                # flags are either integers or characters or None:
+                if self.cols['flag'] is None:
+                    flags = np.zeros_like(times)
+                else:
+                    flags = data[self.cols['flag']]
+                    if type(data[self.cols['flag']]) is np.char.chararray:
+                        flags = np.array([0 if f == 'G' else -1 for f in flags])
 
                 # remove bad quality flags:
                 times = times[flags == 0]
@@ -212,6 +215,26 @@ class TGLCProvenance(Provenance):
         'flux': 'aperture_flux',
         'ferr': 'background',
         'flag': 'TESS_flags'
+    }
+
+
+class T16Provenance(Provenance):
+    name = 'T16'
+    fits_extension = 1
+    object_id = 'gaia_id'
+
+    query_filter = {
+        'dataproduct_type': 'timeseries',
+        'project': 'TESS',
+        'provenance_name': 'T16',
+    }
+    data_filter = {
+    }
+    cols = {
+        'time': 'TMID_BJD',
+        'flux': 'IFL1',
+        'ferr': 'IFE1',
+        'flag': None
     }
 
 

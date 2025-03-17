@@ -1,13 +1,11 @@
 from django.db import models
 from astroquery.mast import Observations as obs
 from . import backend
-from .pipeline import download_fits, load_data, run_lombscargle, run_bls, bjd2phase
-from .provenances import get_provenance
+from .pipeline import load_data, run_lombscargle, run_bls, bjd2phase
 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 from astropy.io import fits
 from astropy.table import Table
 
@@ -113,6 +111,10 @@ class TIC(models.Model):
             TESS ID of the target star.
         syndicate_data : bool, optional, default True
             If True, the method will download the data from MAST.
+        attach_spd_data : bool, optional, default True
+            If True, the method will attach spectral power density data
+            to the syndicated data. Note that `syndicate_data` must also
+            be set to True.
         create_static : bool, optional, default True
             If True, the method will create static files for the target.
         static_dir : str, optional, default 'static/catalog'
@@ -128,10 +130,15 @@ class TIC(models.Model):
         Raises
         ------
         ValueError
-            If the sector is not found in the database.
+            If the TIC is not found in the MAST database.
+            If the sector is not found in the internal database.
         """
 
         meta = backend.download_meta(tess_id)
+        status = meta.pop('status')
+        if status != 'success':
+            raise ValueError(f'TIC {tess_id} not found in the MAST database.')
+
         sectors = meta.pop('sectors')
         provenances = meta.pop('provenances')
 
@@ -159,6 +166,11 @@ class TIC(models.Model):
             force_overwrite = kwargs.get('overwrite_static_files', False)
             tic.download_data()
             tic.syndicate_data(force_overwrite=force_overwrite)
+
+            # attach SPD data if requested:
+            if kwargs.get('attach_spd_data', True):
+                force_overwrite = kwargs.get('overwrite_static_files', True)
+                tic.attach_spds_to_data(force_overwrite=force_overwrite)
 
         # create static files if requested:
         if kwargs.get('create_static', False):
