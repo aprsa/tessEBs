@@ -2,6 +2,7 @@ from django.db import models
 from astroquery.mast import Observations as obs
 from . import backend
 from .pipeline import load_data, run_lombscargle, run_bls, bjd2phase
+from .provenances import get_provenance
 
 import os
 import numpy as np
@@ -164,7 +165,8 @@ class TIC(models.Model):
         # download and syndicate data if requested:
         if kwargs.get('syndicate_data', True):
             force_overwrite = kwargs.get('overwrite_static_files', False)
-            for provenance in tic.provenances.all():
+            for provenance_name in tic.provenances.all():
+                provenance = get_provenance(provenance_name)
                 provenance.download(tess_id=tess_id)
             tic.syndicate_data(force_overwrite=force_overwrite)
 
