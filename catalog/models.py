@@ -165,7 +165,7 @@ class TIC(models.Model):
         # download and syndicate data if requested:
         if kwargs.get('syndicate_data', True):
             force_overwrite = kwargs.get('overwrite_static_files', False)
-            for provenance_name in tic.provenances.all():
+            for provenance_name in provenances:
                 provenance = get_provenance(provenance_name)
                 provenance.download(tess_id=tess_id)
             tic.syndicate_data(force_overwrite=force_overwrite)
