@@ -68,12 +68,12 @@ The preferred way to add a new TIC entry is to use a class method `from_mast()` 
 ```python
 >>> tic = TIC.from_mast(
 ...     tess_id=1234567890
-...     download_data=True,
-...     download_path='/local/path',
+...     syndicate_data=True,
+...     attach_spd_data=True,
 ...     create_static=True,
 ...     static_dir='static/catalog')
 ```
-This will query MAST for all TIC parameters, download data to the local directory specified by `download_path`, create static files (timeseries and spectral power density data and figures), and store them under `static_dir`.
+This will query MAST for all TIC parameters, download data to the local directory,  create static files (timeseries and spectral power density figures), and store them under `static_dir`.
 
 Alternatively, we can instantiate a `TIC`-class object by passing all relevant parameters:
 ```python

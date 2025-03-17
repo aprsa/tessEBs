@@ -161,10 +161,11 @@ class TIC(models.Model):
             prov, _ = Provenance.objects.get_or_create(name=pname)
             tic.provenances.add(prov)
 
-        # download data if requested:
+        # download and syndicate data if requested:
         if kwargs.get('syndicate_data', True):
             force_overwrite = kwargs.get('overwrite_static_files', False)
-            tic.download_data()
+            for provenance in tic.provenances.all():
+                provenance.download(tess_id=tess_id)
             tic.syndicate_data(force_overwrite=force_overwrite)
 
             # attach SPD data if requested:
@@ -178,9 +179,6 @@ class TIC(models.Model):
             tic.create_static_files(force_overwrite=force_overwrite)
 
         return tic
-
-    def download_data(self, dest_dir='static/catalog', **kwargs):
-        return backend.download_data(tess_id=self.tess_id, dest_dir=dest_dir, **kwargs)
 
     def syndicate_data(self, data_dir='static/catalog/lc_data', force_overwrite=False):
         return backend.syndicate_data(self, dest_dir=data_dir, force_overwrite=force_overwrite)

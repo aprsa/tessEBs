@@ -104,40 +104,6 @@ def download_meta(tess_id):
     return meta
 
 
-def download_data(tess_id, dest_dir='static/catalog', **kwargs):
-    """
-    Download fits files for a given TESS ID.
-
-    Arguments:
-    ----------
-    tess_id: int, required
-        TESS ID of the target.
-    dest_dir: str, optional, default='static/catalog'
-        Destination directory for the downloaded files.
-
-    Keyword arguments:
-    ------------------
-    obs_collection: str
-        Observation collection, 'TESS' or 'HLSP'. By default all collections are downloaded.
-    provenance_name: str
-        Provenance name. By default all provenance names are downloaded.
-
-    Returns:
-    --------
-    list or None
-        List of downloaded files. None if no files were found.
-    """
-
-    data = obs.query_criteria(target_name=tess_id, dataproduct_type='timeseries', project='TESS', **kwargs)
-    if len(data) > 0:
-        products = [product for product in obs.get_product_list(data) if 'lc.fits' in product['productFilename']]
-        if len(products) == 0:
-            return None
-        return obs.download_products(products, download_dir=dest_dir)
-
-    return None
-
-
 def syndicate_data(tic, dest_dir='static/catalog/lc_data', force_overwrite=False):
     fname = f'{dest_dir}/tic{tic.tess_id:010d}.fits'
     if os.path.exists(fname) and not force_overwrite:
