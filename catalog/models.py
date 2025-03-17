@@ -1,13 +1,11 @@
 from django.db import models
 from astroquery.mast import Observations as obs
 from . import backend
-from .pipeline import download_fits, load_data, run_lombscargle, run_bls, bjd2phase
-from .provenances import get_provenance
+from .pipeline import load_data, run_lombscargle, run_bls, bjd2phase
 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 from astropy.io import fits
 from astropy.table import Table
 
