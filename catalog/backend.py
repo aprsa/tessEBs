@@ -66,7 +66,7 @@ def download_meta(tess_id):
         for other_id in other_ids:
             if 'ASAS' in other_id:
                 asas_id = other_id.split(' ')[1]
-            if 'Kepler' in other_id:
+            if 'KIC' in other_id:
                 kepler_id = other_id.split(' ')[1]
             if 'DR3' in other_id:
                 gaia_dr3_id = other_id.split(' ')[2]

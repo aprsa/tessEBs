@@ -91,11 +91,7 @@ def run_lombscargle(data, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
     time = data['times']
     flux = (data['fluxes'] - np.mean(data['fluxes']))/np.std(data['fluxes'])
     power = LS(time, flux, w, normalize=False)
-    try:
-        logfap = np.log10(1.0 - exponweib.cdf(power, a=1.0, c=1.0, loc=0.0, scale=1.0))
-    except Exception as e:
-        print(f'exception intercepted: {e}')
-        logfap = np.full_like(power, fill_value=-1.0)
+    # logfap = np.log10(1.0 - exponweib.cdf(power, a=1.0, c=1.0, loc=0.0, scale=1.0))
 
     # Find peaks
     if npeaks > 0:
@@ -112,7 +108,6 @@ def run_lombscargle(data, pmin=0.1, pmax=15, pstep=0.001, npeaks=0):
         'freqs': w,
         'periods': 2*np.pi/w,
         'powers': power,
-        'logfaps': logfap,
         'peak_frequencies': peak_freqs,
         'peak_powers': peak_powers,
         'peak_periods': peak_periods
