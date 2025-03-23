@@ -1,4 +1,5 @@
 # Private files
+.env
 tessEBs/private.py
 
 # Local files:

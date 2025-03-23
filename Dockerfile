@@ -12,7 +12,7 @@ RUN pip install --upgrade pip
 RUN pip install numpy scipy matplotlib astropy astroquery
 
 # Install django stuff:
-RUN pip install django django-cors-headers django-csv-export-view mysqlclient uwsgi
+RUN pip install django django-csv-export-view mysqlclient uwsgi
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -30,6 +30,9 @@ RUN rm -rf /opt/build/bokeh
 
 # Grab TESS EB server:
 RUN git clone https://github.com/aprsa/tessEBs /srv/www/tessEBs
+
+# Copy secrets:
+COPY tessEBs/private.py /srv/www/tessEBs/tessEBs/private.py
 
 # Open port 8080 to localhost:
 EXPOSE 8080

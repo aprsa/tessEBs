@@ -1,24 +1,21 @@
 services:
   mariadb:
-    image: mariadb
-    environment:
-      MYSQL_ROOT_PASSWORD: rootaccess
-      MYSQL_DATABASE: tessEBs
-      MYSQL_USER: webadmin
-      MYSQL_PASSWORD: webadmin
-    command: --max_allowed_packet=32505856
     container_name: tessEBs_db
+    image: mariadb
+    env_file:
+      - .env
+    command: --max_allowed_packet=32505856
     restart: always
     volumes:
-      - ./tessEBs.20250316.sql:/docker-entrypoint-initdb.d/dbimport.sql
+      - ./tessEBs.20250323.sql:/docker-entrypoint-initdb.d/dbimport.sql
       - ./dbdata:/var/lib/mysql
       - /tmp/tessEBs/mysqld:/var/run/mysqld
     healthcheck:
-      test: ["CMD", "mariadb", "-h", "localhost", "-uwebadmin", "-pwebadmin", "-e", "use", "tessEBs"]
+      test: ["CMD", "mariadb", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}", "-e", "use", "${MYSQL_DATABASE}"]
       timeout: 10s
       retries: 10
     ports:
-      - "3305:3306"
+      - "${MYSQL_PORT}:3306"
 
   django:
     container_name: tessEBs_django
@@ -29,8 +26,7 @@ services:
       mariadb:
         condition: service_healthy
     volumes:
-      - ./catalog:/srv/www/tessEBs/catalog
-      - ./tessEBs:/srv/www/tessEBs/tessEBs
+      - ./catalog/static:/srv/www/tessEBs/catalog/static
       - ./static:/srv/www/tessEBs/static
       - /tmp/tessEBs/mysqld:/var/run/mysqld
     working_dir: /srv/www/tessEBs
