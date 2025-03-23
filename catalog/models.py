@@ -1,5 +1,4 @@
 from django.db import models
-from astroquery.mast import Observations as obs
 from . import backend
 from .pipeline import load_data, run_lombscargle, run_bls, bjd2phase
 from .provenances import get_provenance
