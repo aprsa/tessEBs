@@ -50,7 +50,7 @@ class MainView(ListView):
         context['link'] = '?order_by=tic'
         context['ebno'] = self.ebno
         context['page_of_EBs'] = self.paginator.get_page(self.page_num)
-        context['fields'] = ['tic__tess_id', 'sectors', 'bjd0', 'bjd0_uncert', 'period', 'period_uncert', 'morph_coeff', 'source', 'flags']
+        context['fields'] = ['tic__tess_id', 'sectors', 'ephemeris__bjd0', 'ephemeris__bjd0_uncert', 'ephemeris__period', 'ephemeris__period_uncert', 'morph_coeff', 'source', 'flags']
         return context
 
     def get_queryset(self):
@@ -118,10 +118,10 @@ class MASTExport(CSVExportView):
         'tic__pmdec',
         'tic__Tmag',
         'tic__teff',
-        'bjd0',
-        'bjd0_uncert',
-        'period',
-        'period_uncert',
+        'ephemeris__bjd0',
+        'ephemeris__bjd0_uncert',
+        'ephemeris__period',
+        'ephemeris__period_uncert',
         'morph_coeff',
         'prim_width_pf',
         'prim_depth_pf',
@@ -169,8 +169,8 @@ class SearchResultsView(ListView):
     def filter(self):
         self.fields = [
             'tic__tess_id',
-            'bjd0',
-            'period',
+            'ephemeris__bjd0',
+            'ephemeris__period',
             'morph_coeff',
             'tic__ra',
             'tic__dec',
@@ -207,7 +207,7 @@ class SearchResultsView(ListView):
         context['fields'] = self.request.GET.getlist('c')
         # if quicksearch is used, no fields will be selected; fall back:
         if len(context['fields']) == 0:
-            context['fields'] = ['tic__tess_id', 'sectors', 'bjd0', 'bjd0_uncert', 'period', 'period_uncert', 'morph_coeff', 'source', 'flags']
+            context['fields'] = ['tic__tess_id', 'sectors', 'ephemeris__bjd0', 'ephemeris__bjd0_uncert', 'ephemeris__period', 'ephemeris__period_uncert', 'morph_coeff', 'source', 'flags']
 
         return context
 
