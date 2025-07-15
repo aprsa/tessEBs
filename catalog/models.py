@@ -791,7 +791,7 @@ class Ephemeris(models.Model):
         if len(data) <= 1:
             raise ValueError(f'no lightcurve data found for TIC {self.tic.tess_id:010d}.')
 
-        fname = f'{static_dir}/triage/tic{self.tic.tess_id:010d}.{provenance or 'all'}.eph{self.pk:07d}.ph.png'
+        fname = f'{static_dir}/triage/tic{self.tic.tess_id:010d}.{provenance or "all"}.eph{self.pk:07d}.ph.png'
         if os.path.exists(fname) and not force_overwrite:
             return
 
