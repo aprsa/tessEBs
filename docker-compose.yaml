@@ -30,7 +30,7 @@ services:
       - ./static:/srv/www/tessEBs/static
       - /tmp/tessEBs/mysqld:/var/run/mysqld
     working_dir: /srv/www/tessEBs
-    command: sh -c "uwsgi --http :8080 --wsgi-file tessEBs/wsgi.py --master --processes 4 --threads 2 --log-x-forwarded-for --static-map2 /static=/srv/www/tessEBs"
+    command: sh -c "uwsgi --http :8080 --wsgi-file tessEBs/wsgi.py --master --processes 4 --threads 2 --log-x-forwarded-for --static-map2 /static=/srv/www/tessEBs --log-5xx"
     restart: always
     ports:
       - "8080:8080"
