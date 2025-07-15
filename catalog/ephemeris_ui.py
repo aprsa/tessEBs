@@ -3,6 +3,7 @@ import numpy as np
 from .models import TIC, Ephemeris
 
 from . import pipeline as pl
+from . import backend
 
 from bokeh.themes import Theme
 from bokeh import events
@@ -22,9 +23,9 @@ def create_ephemeris_ui(tess_id):
 
     lcs = {}
     for provenance in provenances:
-        lc = pl.load_data(tess_id, datatype='lc', provenance=provenance)
+        lc = backend.load_data(tess_id, datatype='lc', provenance=provenance)
         if lc is not None:
-            lcs[provenance] = lc
+            lcs[provenance] = lc[provenance]
 
     active_provenance = 'TESS-SPOC' if 'TESS-SPOC' in provenances else provenances[0]
     lc = lcs[active_provenance]
@@ -60,7 +61,7 @@ def create_ephemeris_ui(tess_id):
 
     original_data = {provenance: ColumnDataSource({
         'time': lcs[provenance]['times'],
-        'phase': pl.bjd2phase(lcs[provenance]['times'], 0, 1),
+        'phase': backend.bjd2phase(lcs[provenance]['times'], 0, 1),
         'flux': lcs[provenance]['fluxes'],
         'dflux': np.diff(lcs[provenance]['fluxes'], append=[lcs[provenance]['fluxes'][-1],]),
     }) for provenance in provenances}
@@ -68,31 +69,30 @@ def create_ephemeris_ui(tess_id):
     # data that will be displayed:
     displayed_data = ColumnDataSource({
         'time': lc['times'],
-        'phase': pl.bjd2phase(lc['times'], 0, 1),
+        'phase': backend.bjd2phase(lc['times'], 0, 1),
         'flux': lc['fluxes'],
         'dflux': np.diff(lc['fluxes'], append=[lc['fluxes'][-1],]),
     })
 
     # periodogram data:
-    spd = pl.load_data(tess_id, datatype='spd')
+    spd = backend.load_data(tess_id, datatype='spd')
     if spd is None:
         pmin = 1/24  # 1 hour
         pmax = 27.0  # TESS sector length
         pstep = 0.0007  # 1 minute
 
-        spd = pl.run_lombscargle(lc['times'], lc['fluxes'], lc['ferrs'], pmin, pmax, pstep)
+        spd = pl.run_lombscargle(lc, pmin, pmax, pstep)
 
     spd_data = ColumnDataSource({
-        'period': spd['periods'],
-        'power': spd['powers'],
+        'period': spd[active_provenance]['periods'],
+        'power': spd[active_provenance]['powers'],
     })
 
     # figure definitions:
-    
     tooltips = [
         ('coords', '@time{0.000}, @flux'),
     ]
-    
+
     lcf = figure(
         tools='pan,box_zoom,save,reset',  # also available: help, hover, box_select, wheel_zoom, lasso_select, poly_select, tap, crosshair
         tooltips=tooltips,
@@ -498,7 +498,7 @@ def create_ephemeris_ui(tess_id):
             .then(data => {
                 if (data.status === 'success') {
                     console.log('Ephemeris added to the database.');
-                    
+
                     // reload the window:
                     window.location.reload();
                 } else {

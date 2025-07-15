@@ -2,6 +2,16 @@
 
 This code utilizes [django](https://www.djangoproject.com/) to create and maintain the TESS eclipsing binary catalog backbone. The database backend is [mariadb](https://mariadb.org/). It is written and maintained by Andrej Prsa and the TESS Eclipsing Binary Working Group. The associated paper is [ApJS 258, 16, 2022](https://ui.adsabs.harvard.edu/abs/2022ApJS..258...16P/abstract).
 
+## Deploying a dockerized version
+
+The tessEBs backend and website can be run from the docker container. By default, the base docker image is python:3.11-bookworm and the website is served by uwsgi.
+
+To build and deploy a dockerized tessEBs image, issue:
+
+```bash
+docker compose up --build -d
+```
+
 ## Database structure
 
 The database structure is defined in `catalog/models.py`. The main tables are:
@@ -20,7 +30,7 @@ The database structure is defined in `catalog/models.py`. The main tables are:
 
 ## Installation
 
-The tessEBs backend is developed in python 3.6+ and django 3.0+. The actual deployment versions are python 3.7.6 and django 3.2.13.
+The tessEBs backend is compatible with python 3.6+ and django 3.0+. The actual deployment versions are python 3.12.3 and django 5.2.3.
 
 To deploy the database (and the website) locally:
 
@@ -32,7 +42,7 @@ To deploy the database (and the website) locally:
 
 ### Setting up credentials
 
-Typically, all settings that pertain to the database and the website reside in `tessEBs/settings.py`. This is certainly a distinct possibility, but given that this file is shared publicly at github, it would be impractical to keep the actual version on github and using a local version in production. Instead, we keep all credentials in the `tessEBs/private.py` file. The minimal contents are:
+Typically, all settings that pertain to the database and the website reside in `tessEBs/settings.py`. This is certainly a distinct possibility, but given that this file is shared publicly on github, it would be impractical to keep the actual version on github and using a local version in production. Instead, we keep all credentials in the `tessEBs/private.py` file. The minimal contents are:
 
 ```text
 # tessEBs/private.py
