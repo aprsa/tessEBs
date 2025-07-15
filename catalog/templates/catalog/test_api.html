@@ -6,12 +6,25 @@
 <h1> API test frontend </h1>
 
 {% if user.is_authenticated %}
-    <form action="api/test" method="post">
-        {% csrf_token %}
-        <button type="submit">Test connection</button>
-    </form>
+<table>
+    <tr>
+        <td>
+            <form action="api/test" method="post">
+                {% csrf_token %}
+                <button type="submit">Test connection</button>
+            </form>
+        </td>
+        <td>
+            <form action="api/test_error" method="post">
+                {% csrf_token %}
+                <button type="submit">Test error</button>
+            </form>
+        </td>
+    </tr>
+</table>
 
-    <br>
+
+<br>
 {% else %}
     Please authenticate first in order to use the API.
 {% endif %}

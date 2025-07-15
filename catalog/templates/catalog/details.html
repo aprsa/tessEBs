@@ -12,7 +12,11 @@
 
     This TESS ID is not in the catalog.
     {% if user.is_authenticated %}
-        <a href="admin/catalog/eb/?q={{tess_id|add:"0"}}">Add it?</a>
+        <form action="api/tic/add" method="post" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="tess_id" value="{{ tess_id }}">
+            <button type="submit">Add it?</button>
+        </form>
     {% endif %}
 
 {% else %}

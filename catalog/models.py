@@ -1,6 +1,6 @@
 from django.db import models
 from . import backend
-from .pipeline import load_data, run_lombscargle, run_bls, bjd2phase
+from .pipeline import run_lombscargle, run_bls
 from .provenances import get_provenance
 
 import os
@@ -213,7 +213,7 @@ class TIC(models.Model):
             The provenance name to select the data from. If None, the
             provenance will default to the first one in the list.
         """
-        return load_data(self.tess_id, provenance=provenance)
+        return backend.load_data(self.tess_id, provenance=provenance)
 
     def get_spd(self, provenance=None):
         """
@@ -225,7 +225,7 @@ class TIC(models.Model):
             The provenance name to select the data from. If None, the
             provenance will default to the first one in the list.
         """
-        return load_data(self.tess_id, datatype='spd', provenance=provenance)
+        return backend.load_data(self.tess_id, datatype='spd', provenance=provenance)
 
     def run_bls(self, pmin=0.5, pmax=10.0, duration=0.5, min_eclipses=3):
         times, fluxes, ferrs = self.get_lightcurve()
@@ -242,7 +242,14 @@ class TIC(models.Model):
         # bls_logp = logfaps[max_power_idx]
 
         # instantiate the BLS_run instance:
-        # bls_run = BLS_run(tic=self, duration=duration, min_eclipses=min_eclipses, pmin=pmin, pmax=pmax, bjd0=bjd0, period=period, max_power=max_power, bls_logp=bls_logp)
+        # bls_run = BLS_run(
+        #     tic=self,
+        #     duration=duration,
+        #     min_eclipses=min_eclipses,
+        #     pmin=pmin, pmax=pmax,
+        #     bjd0=bjd0, period=period,
+        #     max_power=max_power,
+        #     bls_logp=bls_logp)
         # bls_run.save()
 
         # return bls_run
@@ -569,16 +576,9 @@ class EB(models.Model):
         verbose_name_plural = 'EBs'
 
     def save(self, *args, **kwargs):
-        # we are overloading the save() method to be able to test for duplicates, handle many-to-many relationships,
-        # to generate supporting plots and to auto-increment the id.
-
-        # filelist = kwargs.get('filelist', None)
-        # generate_plots = kwargs.get('generate_plots', False)
-
-        # if generate_plots:
-        #     p.generate_plots(self.tic.tess_id, prefix='catalog/static/catalog/images', tlc=True, plc=True, spd=True, signal_id=self.signal_id, bjd0=self.bjd0, period=self.period, filelist=filelist)
-        #     # FIXME: this shouldn't be returning
-        #     return
+        # we are overloading the save() method to be able to test for
+        # duplicates, handle many-to-many relationships, to generate
+        # supporting plots and to auto-increment the id.
 
         # if there are no args/kwargs, revert to built-in save():
         if len(args) == 0 and len(kwargs) == 0:
@@ -591,7 +591,8 @@ class EB(models.Model):
 
         force_adding = kwargs.get('force_adding', False)
 
-        # If the TIC does not exist in the database, save it irrespective of whether the period is passed or not:
+        # If the TIC does not exist in the database, save it
+        # irrespective of whether the period is passed or not:
         if EB.objects.filter(tic=self.tic).count() == 0:
             super(EB, self).save()
             self.origin.add(origin)
@@ -599,7 +600,8 @@ class EB(models.Model):
                 self.sectors.add(sector)
             return
 
-        # If period is not provided, and the TIC exists in the database, refuse to add another one unless forced:
+        # If period is not provided, and the TIC exists in the
+        # database, refuse to add another one unless forced:
         if self.period is None and EB.objects.filter(tic=self.tic).count() != 0:
             if not force_adding:
                 print('TIC %010d is already present in the database, not saving (pass force_adding=True to override).' % self.tic.tess_id)
@@ -611,7 +613,8 @@ class EB(models.Model):
                 for sector in sectors:
                     self.sectors.add(sector)
 
-        # If period is provided and the TIC does exist in the database, check its value against the tolerance:
+        # If period is provided and the TIC does exist in the
+        # database, check its value against the tolerance:
         if self.period is not None and EB.objects.filter(tic=self.tic).count() > 0:
             counter = 1
             for entry in EB.objects.filter(tic=self.tic):
@@ -646,7 +649,7 @@ class EB(models.Model):
                 if len(data) <= 1:
                     continue
 
-                phases = bjd2phase(times=data['times'], bjd0=bjd0, period=period)
+                phases = backend.bjd2phase(times=data['times'], bjd0=bjd0, period=period)
 
                 plt.figure('phfig', figsize=(8, 5))
                 plt.xlabel('Phase')
@@ -764,6 +767,42 @@ class Ephemeris(models.Model):
             f"triage_status='{self.triage_status}', "
             f"triage_period='{self.triage_period}', "
             f"triage_username='{self.triage_username}')>"
+        )
+
+    def generate_plots(self, static_dir='static/catalog', provenance=None, force_overwrite=False):
+        """
+        Generate plots for the ephemeris.
+
+        Parameters
+        ----------
+        static_dir : str, optional, default 'static/catalog'
+            The root directory where the static files will be stored.
+        provenance : str, optional, default None
+            The provenance name to select the data from. If None, all
+            provenances will be used.
+        force_overwrite : bool, optional, default False
+            If True, the method will overwrite existing files.
+        """
+
+        bjd0 = self.bjd0 or 0.0
+        period = self.period or 1.0
+
+        data = backend.load_data(self.tic.tess_id, provenance=provenance)
+        if len(data) <= 1:
+            raise ValueError(f'no lightcurve data found for TIC {self.tic.tess_id:010d}.')
+
+        fname = f'{static_dir}/triage/tic{self.tic.tess_id:010d}.{provenance or 'all'}.eph{self.pk:07d}.ph.png'
+        if os.path.exists(fname) and not force_overwrite:
+            return
+
+        backend.plot_plc(
+            filename=fname,
+            data=data,
+            bjd0=bjd0,
+            period=period,
+            title=f'TIC {self.tic.tess_id:010d}, period {self.period:0.4f} days',
+            xlabel='Phase',
+            ylabel='Normalized PDC flux'
         )
 
 

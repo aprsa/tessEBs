@@ -1,12 +1,39 @@
 import os
 import numpy as np
 import time
+import matplotlib.pyplot as plt
+
 from astroquery.mast import Catalogs as cat, Observations as obs, Tesscut as tc
 from astroquery.simbad import Simbad as simbad
 from astropy.io import fits
 from astropy.table import Table
 
 from . import provenances
+
+
+def bjd2phase(times, bjd0, period, pshift=0.0):
+    """
+    Convert BJD times to phase.
+
+    Parameters
+    ----------
+    times : ndarray
+        BJD times.
+    bjd0 : float
+        BJD of the first primary eclipse.
+    period : float
+        Period of the binary star.
+    pshift : float, optional, default=0.0
+        Phase shift.
+
+    Returns
+    -------
+    phases : ndarray
+        Phases of the binary star.
+    """
+
+    phases = -0.5+((times-bjd0-(pshift+0.5)*period) % period) / period
+    return phases
 
 
 def download_meta(tess_id):
@@ -128,3 +155,116 @@ def syndicate_data(tic, dest_dir='static/catalog/lc_data', force_overwrite=False
     fits.HDUList(hdus).writeto(fname, overwrite=True)
 
     return fname
+
+
+def load_data(tess_id, datatype='lc', provenance=None, data_dir='static/catalog/lc_data'):
+    """
+    Load data from a FITS file.
+
+    Parameters
+    ----------
+    tess_id : int
+        TESS ID of the target.
+    datatype : str
+        Data type of the target (e.g. 'lc', 'spd').
+    provenance : str
+        Provenance name. If None, all provenances are used.
+    data_dir : str
+        Directory where the FITS file is located.
+
+    Returns
+    -------
+    data : dict
+        Dictionary containing data arrays with provenance names as keys.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the FITS file does not exist.
+    ValueError
+        If the provenance is not found in the FITS file.
+        If the data type is not recognized.
+    """
+
+    filename = f'{data_dir}/tic{tess_id:010d}.fits'
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f'File {filename} not found.')
+
+    result = {}
+    with fits.open(f'{data_dir}/tic{tess_id:010d}.fits') as hdul:
+        # get all provenances in the fits file:
+        provenances = list(hdul[0].header['PROVS'].split(','))
+
+        # if provenance is given, use it; otherwise include all provenances:
+        if provenance is not None:
+            if provenance not in provenances:
+                raise ValueError(f'Provenance {provenance} not found in file {filename}.')
+
+            if datatype == 'lc':
+                result[provenance] = hdul[provenance].data
+            elif datatype == 'spd':
+                result[provenance] = hdul[provenance+'-SPD'].data
+            else:
+                raise ValueError(f'load_data(): data type {datatype} not recognized.')
+        else:
+            for prov in provenances:
+                if datatype == 'lc':
+                    result[prov] = hdul[prov].data
+                elif datatype == 'spd':
+                    result[prov] = hdul[prov+'-SPD'].data
+                else:
+                    raise ValueError(f'load_data(): data type {datatype} not recognized.')
+
+        return result
+
+
+def plot_plc(filename, data, bjd0, period, pshift=0.0, title=None, xlabel='Phase', ylabel='Normalized Flux'):
+    """
+    Plot the phased light curve.
+
+    Parameters
+    ----------
+    filename : str
+        Filename to save the plot.
+    data : ndarray
+        Data array.
+    bjd0 : float
+        BJD of the first primary eclipse.
+    period : float
+        Period of the binary star.
+    pshift : float, optional, default=0.0
+        Phase shift.
+    title : str, optional, default=None
+        Title of the plot.
+    xlabel : str, optional, default='Phase'
+        X-axis label.
+    ylabel : str, optional, default='Normalized Flux'
+        Y-axis label.
+
+    Returns
+    -------
+    None
+    """
+
+    plt.figure('plc', figsize=(8, 5))
+    plt.xlabel(xlabel or 'Phase')
+    plt.ylabel(ylabel or 'Flux')
+    plt.title(title or '')
+
+    # Get a color cycle from matplotlib
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+
+    for i, (provenance, prov_data) in enumerate(data.items()):
+        color = colors[i % len(colors)]
+        times, fluxes = prov_data['times'], prov_data['fluxes']
+        phases = bjd2phase(times, bjd0, period, pshift=pshift)
+
+        # Plot all points with the same color for consistency
+        plt.plot(phases, fluxes, '.', label=provenance, color=color)
+        plt.plot(phases[phases > 0.4]-1.0, fluxes[phases > 0.4], '.', color=color)
+        plt.plot(phases[phases < -0.4]+1.0, fluxes[phases < -0.4], '.', color=color)
+
+    plt.legend()
+    plt.savefig(filename)
+    plt.close()

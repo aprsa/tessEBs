@@ -1,53 +1,17 @@
-import glob
 import subprocess
 import numpy as np
-import matplotlib.pyplot as plt
 import tempfile
 import os
 
-from astropy.io import fits
 from astropy.timeseries import BoxLeastSquares as BLS
 
 from scipy.signal import lombscargle as LS
 from scipy.signal import find_peaks, peak_prominences
-from scipy.stats import exponweib
-
-
-def fits_exists(tess_id):
-    fits_list = glob.glob('%s/**/*%d*lc.fits' % (DATADIR, tess_id), recursive=True)
-    if len(fits_list) > 0:
-        return True
-    else:
-        return False
 
 
 def read_from_path(tess_id, provenance, data_dir='static/catalog', normalize=True, remove_nans=True):
     times, fluxes, ferrs = provenance.lc(tess_id=tess_id, data_dir=data_dir, normalize=normalize, remove_nans=remove_nans)
     return times, fluxes, ferrs
-
-
-def load_data(tess_id, datatype='lc', provenance=None, data_dir='static/catalog/lc_data'):
-    filename = f'{data_dir}/tic{tess_id:010d}.fits'
-    if not os.path.exists(filename):
-        raise FileNotFoundError(f'File {filename} not found.')
-
-    with fits.open(f'{data_dir}/tic{tess_id:010d}.fits') as hdul:
-        if provenance is None:
-            provenance = hdul[1].header['EXTNAME']
-
-        if datatype == 'lc':
-            return hdul[provenance].data
-
-        elif datatype == 'spd':
-            return hdul[provenance+'-SPD'].data
-
-        else:
-            raise ValueError(f'Data type {datatype} not recognized.')
-
-
-def bjd2phase(times, bjd0, period, pshift=0.0):
-    phases = -0.5+((times-bjd0-(pshift+0.5)*period) % period) / period
-    return phases
 
 
 def estimate_period(time, flux, window):

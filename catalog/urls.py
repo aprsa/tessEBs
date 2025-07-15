@@ -17,8 +17,6 @@ urlpatterns = [
     path('search', views.SearchView.as_view(), name='search'),
     path('search_results', views.SearchResultsView.as_view(), name='search_results'),
     path('ephem/<int:tess_id>', views.EphemView.as_view(), name='ephemeris_inspector'),
-    path('add_tic/<int:tess_id>', views.AddTICView.as_view(), name='add_tic'),
-    path('add_tic', views.AddTICView.as_view(), name='add_tic'),
     path('triage/<int:tess_id>', views.TriageView.as_view(), name='triage'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/profile/', views.profile, name='profile'),
@@ -31,6 +29,7 @@ urlpatterns = [
 
     # api views:
     path('api/test', views.ApiTestView.as_view(), name='test'),
+    path('api/test_error', views.ApiTestErrorView.as_view(), name='test_error'),
     path('api/tic/download_meta', views.ApiTicDownloadMetaView.as_view(), name='fetch_from_online_databases'),
     path('api/tic/syndicate_data', views.ApiSyndicateDataView.as_view(), name='syndicate_data'),
     path('api/tic/add', views.ApiTicAddView.as_view(), name='add_or_update_tic'),

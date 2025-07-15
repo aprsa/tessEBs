@@ -243,22 +243,6 @@ class SearchResultsView(ListView):
         return self.object_list
 
 
-class AddTICView(TemplateView):
-    template_name = 'catalog/add_tic.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tess_id = context.get('tess_id', None)
-
-        if tess_id is not None:
-            tic = TIC.objects.get(tess_id=tess_id)
-            context['already_in_cat'] = tic is not None
-            # if context['already_in_cat']:
-            #     pre-fill the fields?
-
-        return context
-
-
 class EphemView(TemplateView):
     template_name = 'catalog/ephem.html'
 
@@ -357,6 +341,16 @@ class ApiTestView(View):
         return JsonResponse({
             'status': 'success',
         })
+
+
+@method_decorator(login_required, name='dispatch')
+class ApiTestErrorView(View):
+    """
+    Tests the API error handling.
+    """
+    
+    def post(self, request):
+        raise ValueError("This is a test error for the API.")
 
 
 @method_decorator(login_required, name='dispatch')
@@ -490,7 +484,7 @@ class ApiEphemAddView(View):
     def post(self, request):
         try:
             data = json.loads(request.body.decode('utf-8'))
-            
+
             tess_id = data.get('tess_id')
             t0 = data.get('t0')
             period = data.get('period')
@@ -509,6 +503,9 @@ class ApiEphemAddView(View):
             tic = TIC.objects.get(tess_id=tess_id)
             ephem = Ephemeris(tic=tic, source=eph_source, bjd0=t0, period=period)
             ephem.save()
+
+            if data.get('generate_plots', True):
+                ephem.generate_plots()
 
             return JsonResponse({
                 'status': 'success',
