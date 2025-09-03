@@ -50,7 +50,7 @@ class MainView(ListView):
         context['link'] = '?order_by=tic'
         context['ebno'] = self.ebno
         context['page_of_EBs'] = self.paginator.get_page(self.page_num)
-        context['fields'] = ['tic__tess_id', 'sectors', 'ephemeris__bjd0', 'ephemeris__bjd0_uncert', 'ephemeris__period', 'ephemeris__period_uncert', 'morph_coeff', 'source', 'flags']
+        context['fields'] = ['tic__tess_id', 'sectors', 'morph_coeff', 'source', 'flags']
         return context
 
     def get_queryset(self):

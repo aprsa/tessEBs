@@ -398,14 +398,14 @@ class TIC(models.Model):
                     continue
 
                 data = self.get_spd(provenance=provenance)
-                if np.all(np.isnan(data['powers'])):
+                if np.all(np.isnan(data[provenance]['powers'])):
                     continue
 
                 plt.figure('spfig', figsize=(8, 5))
                 plt.yscale('log')
                 plt.xlabel('Period [d]')
                 plt.ylabel('Lomb-Scargle power (log scale)')
-                plt.plot(data['periods'], data['powers'], 'b-')
+                plt.plot(data[provenance]['periods'], data[provenance]['powers'], 'b-')
                 plt.savefig(f'{static_dir}/spd_figs/tic{self.tess_id:010d}.{provenance}.spd.png')
                 plt.close()
 
