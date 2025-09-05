@@ -373,21 +373,21 @@ class TIC(models.Model):
                     continue
 
                 data = self.get_lightcurve(provenance=provenance)
-                if len(data) <= 1:
+                if len(data[provenance]) <= 1:
                     continue
 
                 plt.figure('lcfig', figsize=(16, 5))
                 plt.xlabel('Truncated Barycentric Julian Date')
                 plt.ylabel('Normalized PDC flux')
-                plt.plot(data['times'], data['fluxes'], 'b.')
+                plt.plot(data[provenance]['times'], data[provenance]['fluxes'], 'b.')
                 plt.savefig(fname)
                 plt.close()
 
-                flt = data['times'] < data['times'][0] + 10  # first 10 days of data
+                flt = data[provenance]['times'] < data[provenance]['times'][0] + 10  # first 10 days of data
                 plt.figure('zlcfig', figsize=(16, 5))
                 plt.xlabel('Truncated Barycentric Julian Date')
                 plt.ylabel('Normalized PDC flux')
-                plt.plot(data['times'][flt], data['fluxes'][flt], 'b.')
+                plt.plot(data[provenance]['times'][flt], data[provenance]['fluxes'][flt], 'b.')
                 plt.savefig(f'{static_dir}/lc_figs/tic{self.tess_id:010d}.{provenance}.zlc.png')
                 plt.close()
 
@@ -646,18 +646,18 @@ class EB(models.Model):
                     continue
 
                 data = self.tic.get_lightcurve(provenance=provenance)
-                if len(data) <= 1:
+                if len(data[provenance]) <= 1:
                     continue
 
-                phases = backend.bjd2phase(times=data['times'], bjd0=bjd0, period=period)
+                phases = backend.bjd2phase(times=data[provenance]['times'], bjd0=bjd0, period=period)
 
                 plt.figure('phfig', figsize=(8, 5))
                 plt.xlabel('Phase')
                 plt.ylabel('Normalized PDC flux')
                 plt.title(f'TIC {self.tic.tess_id:010d}, period {self.period:0.4f} days')
-                plt.plot(phases, data['fluxes'], 'b.')
-                plt.plot(phases[phases > +0.4]-1.0, data['fluxes'][phases > +0.4], 'b.')
-                plt.plot(phases[phases < -0.4]+1.0, data['fluxes'][phases < -0.4], 'b.')
+                plt.plot(phases, data[provenance]['fluxes'], 'b.')
+                plt.plot(phases[phases > +0.4]-1.0, data[provenance]['fluxes'][phases > +0.4], 'b.')
+                plt.plot(phases[phases < -0.4]+1.0, data[provenance]['fluxes'][phases < -0.4], 'b.')
                 plt.savefig(fname)
                 plt.close()
 

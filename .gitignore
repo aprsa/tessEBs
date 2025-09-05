@@ -1,5 +1,4 @@
 # Private files
-.env
 tessEBs/private.py
 
 # Local files:
@@ -144,3 +143,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.venv/
