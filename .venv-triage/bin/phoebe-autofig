@@ -1,0 +1,10 @@
+#!/Users/tpawar/Documents/2025/Projects/tessEBs/.venv-triage/bin/python
+
+import sys
+from phoebe.dependencies import autofig
+
+if not len(sys.argv)==2:
+   print("usage: phoebe-autofig filename")
+   exit()
+
+autofig.open(sys.argv[1], do_renders=True)

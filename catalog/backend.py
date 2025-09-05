@@ -202,6 +202,7 @@ def load_data(tess_id, datatype='lc', provenance=None, data_dir='static/catalog/
 
             if datatype == 'lc':
                 result[provenance] = hdul[provenance].data
+
             elif datatype == 'spd':
                 result[provenance] = hdul[provenance+'-SPD'].data
             else:

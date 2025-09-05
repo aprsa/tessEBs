@@ -646,7 +646,7 @@ class EB(models.Model):
                     continue
 
                 data = self.tic.get_lightcurve(provenance=provenance)
-                if len(data) <= 1:
+                if len(data[provenance]) <= 1:
                     continue
 
                 phases = backend.bjd2phase(times=data[provenance]['times'], bjd0=bjd0, period=period)
