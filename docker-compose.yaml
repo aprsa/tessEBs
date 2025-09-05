@@ -12,7 +12,7 @@ services:
       - ./my.cnf:/etc/mysql/conf.d/my.cnf:ro
       - /tmp/tessEBs/mysqld:/var/run/mysqld
     healthcheck:
-      test: ["CMD", "mariadb", "-h", "127.0.0.1", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}", "-e", "use", "${MYSQL_DATABASE}"]
+      test: ["CMD", "mariadb", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}", "-e", "use", "${MYSQL_DATABASE}"]
       timeout: 10s
       retries: 10
     ports:
